@@ -14,7 +14,7 @@ import { Booking, Room } from '../models/types';
 })
 export class HomePage implements OnInit, OnDestroy {
   greeting = '';
-  userName = 'Alice';
+  userName = 'Monskie mon';
   currentTime = '';
 
   todayBookings: Booking[] = [];

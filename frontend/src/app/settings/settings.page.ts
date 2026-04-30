@@ -11,7 +11,7 @@ import { Room } from '../models/types';
 })
 export class SettingsPage implements OnInit {
   // User profile
-  userName = 'Alice Johnson';
+  userName = 'Monskie mon';
   userEmail = 'alice@company.com';
   userRole = 'User';
 

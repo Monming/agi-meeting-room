@@ -42,7 +42,7 @@ const equipmentData = [
 ];
 
 const userData = [
-  { name: 'Alice Johnson',  email: 'alice@company.com',  role: 'admin',  department: 'Engineering' },
+  { name: 'Monskie mon',  email: 'alice@company.com',  role: 'admin',  department: 'Engineering' },
   { name: 'Bob Smith',      email: 'bob@company.com',    role: 'user',   department: 'Design' },
   { name: 'Carol White',    email: 'carol@company.com',  role: 'user',   department: 'Management' },
   { name: 'David Lee',      email: 'david@company.com',  role: 'user',   department: 'Sales' },
