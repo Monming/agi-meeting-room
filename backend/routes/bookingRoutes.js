@@ -3,6 +3,7 @@ const router  = express.Router();
 const ctrl    = require('../controllers/bookingController');
 
 router.get('/today',          ctrl.getTodayBookings);
+router.get('/week',           ctrl.getWeeklyBookings);
 router.get('/day',            ctrl.getDaySchedule);
 router.get('/rules',          ctrl.getBookingRules);
 router.post('/',              ctrl.createBooking);

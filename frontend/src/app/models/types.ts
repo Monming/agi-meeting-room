@@ -65,3 +65,24 @@ export interface TimelineSlot {
   available: boolean;
 }
 
+/** A booking summary shown in the weekly view */
+export interface WeekBooking {
+  _id: string;
+  roomName: string;
+  title: string;
+  userName: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+}
+
+/** A single day entry in the weekly bookings response */
+export interface WeekDay {
+  date: string;          // YYYY-MM-DD
+  bookings: WeekBooking[];
+}
+
+/** Room extended with a computed live status from the backend */
+export interface RoomWithStatus extends Room {
+  liveStatus: 'available' | 'ongoing' | 'upcoming';
+}

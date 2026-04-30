@@ -4,7 +4,7 @@ import { Subscription } from 'rxjs';
 import { BookingService } from '../services/booking.service';
 import { RoomService } from '../services/room.service';
 import { SocketService } from '../services/socket.service';
-import { Booking, Room } from '../models/types';
+import { Booking, WeekDay, WeekBooking, RoomWithStatus } from '../models/types';
 
 @Component({
   selector: 'app-home',
@@ -17,12 +17,22 @@ export class HomePage implements OnInit, OnDestroy {
   userName = 'Monskie mon';
   currentTime = '';
 
+  // Today's data
   todayBookings: Booking[] = [];
-  availableRooms: Room[] = [];
   isLoading = true;
+
+  // Weekly data
+  weekDays: WeekDay[] = [];
+  selectedDayIndex = 0;
+  selectedDayBookings: WeekBooking[] = [];
+
+  // Room statuses
+  roomsWithStatus: RoomWithStatus[] = [];
+  availableRooms: RoomWithStatus[] = [];
 
   private subs: Subscription[] = [];
   private clockInterval: any;
+  private refreshInterval: any;
 
   constructor(
     private bookingService: BookingService,
@@ -35,46 +45,94 @@ export class HomePage implements OnInit, OnDestroy {
     this.setGreeting();
     this.startClock();
     this.socketService.connect();
-    this.loadData();
+    this.loadAllData();
 
     // Live updates via Socket.io
-    const sockSub = this.socketService.onBookingCreated().subscribe(() => this.loadData());
-    const cancelSub = this.socketService.onBookingCancelled().subscribe(() => this.loadData());
+    const sockSub = this.socketService.onBookingCreated().subscribe(() => this.loadAllData());
+    const cancelSub = this.socketService.onBookingCancelled().subscribe(() => this.loadAllData());
     this.subs.push(sockSub, cancelSub);
+
+    // Auto-refresh every 60 seconds
+    this.refreshInterval = setInterval(() => this.loadAllData(), 60000);
   }
 
   ngOnDestroy() {
     this.subs.forEach(s => s.unsubscribe());
     clearInterval(this.clockInterval);
+    clearInterval(this.refreshInterval);
   }
 
-  loadData() {
+  loadAllData() {
     this.isLoading = true;
-    const today = new Date().toISOString().split('T')[0];
+    this.loadTodayBookings();
+    this.loadWeeklyBookings();
+    this.loadRoomStatuses();
+  }
 
-    // Today's bookings (for current user)
+  loadTodayBookings() {
     this.bookingService.getTodayBookings('user-001').subscribe({
       next: res => { this.todayBookings = res.bookings; this.isLoading = false; },
       error: () => { this.isLoading = false; }
     });
+  }
 
-    // Available rooms right now
-    const now = new Date();
-    const hourLater = new Date(now.getTime() + 60 * 60000);
-    this.roomService.getAvailableRooms({
-      date: today,
-      startTime: now.toISOString(),
-      endTime: hourLater.toISOString()
-    }).subscribe({
-      next: res => { this.availableRooms = res.rooms.slice(0, 4); }
+  loadWeeklyBookings() {
+    this.bookingService.getWeeklyBookings().subscribe({
+      next: res => {
+        this.weekDays = res.week;
+        // Default selected day to today
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayIdx = this.weekDays.findIndex(d => d.date === todayStr);
+        this.selectedDayIndex = todayIdx >= 0 ? todayIdx : 0;
+        this.updateSelectedDay();
+      },
+      error: err => console.error('[Home] Weekly fetch error', err)
     });
+  }
+
+  loadRoomStatuses() {
+    this.roomService.getRoomStatus().subscribe({
+      next: res => {
+        this.roomsWithStatus = res.rooms;
+        this.availableRooms = res.rooms.filter(r => r.liveStatus === 'available').slice(0, 4);
+      },
+      error: err => console.error('[Home] Room status fetch error', err)
+    });
+  }
+
+  selectDay(index: number) {
+    this.selectedDayIndex = index;
+    this.updateSelectedDay();
+  }
+
+  updateSelectedDay() {
+    const day = this.weekDays[this.selectedDayIndex];
+    this.selectedDayBookings = day ? day.bookings : [];
+  }
+
+  getDayLabel(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  }
+
+  getDayNumber(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.getDate().toString();
+  }
+
+  isToday(dateStr: string): boolean {
+    return dateStr === new Date().toISOString().split('T')[0];
+  }
+
+  formatTime(isoStr: string): string {
+    return new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   setGreeting() {
     const h = new Date().getHours();
-    if (h < 12)       this.greeting = 'Good Morning';
-    else if (h < 17)  this.greeting = 'Good Afternoon';
-    else              this.greeting = 'Good Evening';
+    if (h < 12)      this.greeting = 'Good Morning';
+    else if (h < 17) this.greeting = 'Good Afternoon';
+    else             this.greeting = 'Good Evening';
   }
 
   startClock() {
@@ -90,15 +148,11 @@ export class HomePage implements OnInit, OnDestroy {
   goToBook() { this.router.navigate(['/tabs/book']); }
 
   checkIn(booking: Booking) {
-    this.bookingService.checkIn(booking._id).subscribe({
-      next: () => this.loadData()
-    });
+    this.bookingService.checkIn(booking._id).subscribe({ next: () => this.loadTodayBookings() });
   }
 
   cancelBooking(booking: Booking) {
-    this.bookingService.cancelBooking(booking._id).subscribe({
-      next: () => this.loadData()
-    });
+    this.bookingService.cancelBooking(booking._id).subscribe({ next: () => this.loadTodayBookings() });
   }
 
   getBookingRoom(booking: Booking): string {
@@ -122,9 +176,9 @@ export class HomePage implements OnInit, OnDestroy {
     return new Date(booking.startTime) > new Date();
   }
 
-  getStatusLabel(room: Room): string {
-    const map: Record<number, string> = { 0: 'Available', 1: 'Occupied', 2: 'Maintenance', 3: 'Reserved' };
-    return map[room.status] ?? 'Unknown';
+  getLiveStatusLabel(room: RoomWithStatus): string {
+    return room.liveStatus === 'ongoing' ? 'Ongoing' :
+           room.liveStatus === 'upcoming' ? 'Upcoming' : 'Available';
   }
 
   getAmenityIcon(amenity: string): string {

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Room, DensityDot, TimelineSlot } from '../models/types';
+import { Room, DensityDot, TimelineSlot, RoomWithStatus } from '../models/types';
 
 import { environment } from '../../environments/environment';
 
@@ -63,5 +63,9 @@ export class RoomService {
 
   deleteRoom(id: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.base}/${id}`);
+  }
+
+  getRoomStatus(): Observable<{ rooms: RoomWithStatus[] }> {
+    return this.http.get<{ rooms: RoomWithStatus[] }>(`${this.base}/status`);
   }
 }

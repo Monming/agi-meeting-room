@@ -318,6 +318,68 @@ exports.createRecurringBooking = async (req, res) => {
 };
 
 /* ─────────────────────────────────────────────────────────────
+   GET /api/bookings/week
+   Returns all confirmed bookings for the current Mon–Sun week,
+   grouped by date.
+   ───────────────────────────────────────────────────────────── */
+exports.getWeeklyBookings = async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Compute Monday of current week (ISO week starts Monday)
+    const day = now.getDay(); // 0=Sun, 1=Mon...6=Sat
+    const diffToMonday = (day === 0) ? -6 : 1 - day;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() + diffToMonday);
+    weekStart.setHours(0, 0, 0, 0);
+
+    // Sunday = Monday + 6
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const bookings = await Booking.find({
+      status: 'confirmed',
+      startTime: { $gte: weekStart, $lte: weekEnd }
+    })
+      .populate('roomId', 'name')
+      .populate('userId', 'name')
+      .sort({ startTime: 1 })
+      .lean();
+
+    // Build a map for each day of the week
+    const result = [];
+    for (let i = 0; i < 7; i++) {
+      const dayDate = new Date(weekStart);
+      dayDate.setDate(weekStart.getDate() + i);
+
+      const dateStr = dayDate.toISOString().split('T')[0];
+      const dayBookings = bookings.filter(b => {
+        return new Date(b.startTime).toISOString().split('T')[0] === dateStr;
+      });
+
+      result.push({
+        date: dateStr,
+        bookings: dayBookings.map(b => ({
+          _id: b._id,
+          roomName: b.roomId?.name || 'Unknown Room',
+          title: b.title || 'Meeting',
+          userName: b.userName || b.userId?.name || 'Unknown',
+          startTime: b.startTime,
+          endTime: b.endTime,
+          status: b.status
+        }))
+      });
+    }
+
+    res.json({ week: result });
+  } catch (err) {
+    console.error('getWeeklyBookings error:', err);
+    res.status(500).json({ error: 'Failed to get weekly bookings' });
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────
    GET /api/bookings/rules[?roomId=]
    ───────────────────────────────────────────────────────────── */
 exports.getBookingRules = async (req, res) => {

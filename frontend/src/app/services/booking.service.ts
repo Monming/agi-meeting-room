@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Booking, TimeSlot } from '../models/types';
-
+import { Booking, TimeSlot, WeekDay } from '../models/types';
 import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -40,5 +39,9 @@ export class BookingService {
 
   checkIn(id: string): Observable<{ booking: Booking }> {
     return this.http.patch<{ booking: Booking }>(`${this.base}/${id}/checkin`, {});
+  }
+
+  getWeeklyBookings(): Observable<{ week: WeekDay[] }> {
+    return this.http.get<{ week: WeekDay[] }>(`${this.base}/week`);
   }
 }

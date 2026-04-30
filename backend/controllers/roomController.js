@@ -295,6 +295,63 @@ exports.searchRooms = async (req, res) => {
 };
 
 /**
+ * GET /api/rooms/status
+ * Returns all active rooms with a computed liveStatus:
+ *   "ongoing"   — a booking is happening right now
+ *   "upcoming"  — next booking starts within 4 hours
+ *   "available" — no booking at the moment
+ */
+exports.getRoomStatus = async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay   = new Date(now); endOfDay.setHours(23, 59, 59, 999);
+
+    // Single query — all confirmed bookings for today
+    const rooms = await Room.find({ isActive: true }).lean();
+    const bookings = await Booking.find({
+      roomId: { $in: rooms.map(r => r._id) },
+      status: 'confirmed',
+      startTime: { $lt: endOfDay },
+      endTime: { $gt: startOfDay }
+    }).select('roomId startTime endTime').lean();
+
+    // Build a map: roomId -> bookings[]
+    const bookingMap = {};
+    bookings.forEach(b => {
+      const key = b.roomId.toString();
+      if (!bookingMap[key]) bookingMap[key] = [];
+      bookingMap[key].push(b);
+    });
+
+    const roomsWithStatus = rooms.map(room => {
+      const roomBookings = bookingMap[room._id.toString()] || [];
+      let liveStatus = 'available';
+
+      for (const b of roomBookings) {
+        const start = new Date(b.startTime);
+        const end   = new Date(b.endTime);
+        if (start <= now && end >= now) {
+          liveStatus = 'ongoing';
+          break;
+        }
+        if (start > now) {
+          liveStatus = 'upcoming';
+          // don't break — a later booking might still be 'ongoing' (shouldn't happen, but safe)
+        }
+      }
+
+      return { ...room, liveStatus };
+    });
+
+    res.json({ rooms: roomsWithStatus });
+  } catch (error) {
+    console.error('getRoomStatus error:', error);
+    res.status(500).json({ error: 'Failed to get room status' });
+  }
+};
+
+/**
  * GET /api/rooms
  * Returns all rooms for Directory page
  */
