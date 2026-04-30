@@ -476,23 +476,37 @@ export class BookPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Returns "10:00 AM → 11:30 AM" using both slot start and end ISOs.
+   * Returns "10:00 AM → 11:30 AM" using the string label to avoid browser timezone shifts.
    */
   getSelectedSlotLabel(): string {
     if (!this.selectedTimeSlot) return 'Not selected';
 
-    const start = new Date(this.selectedTimeSlot);
-    const startLabel = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const slot = this.timelineSlots.find(s => s.iso === this.selectedTimeSlot);
+    if (!slot) return 'Not selected';
 
-    if (this.selectedTimeSlotEnd) {
-      const end = new Date(this.selectedTimeSlotEnd);
-      const endLabel = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const startLabel = slot.label; // e.g. "9:00 AM"
+
+    const match = startLabel.match(/(\d+):(\d+)\s+(AM|PM)/i);
+    if (match) {
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const isPM = match[3].toUpperCase() === 'PM';
+      
+      if (isPM && h !== 12) h += 12;
+      if (!isPM && h === 12) h = 0;
+
+      const totalMins = h * 60 + m + this.effectiveDuration;
+      const endH = Math.floor(totalMins / 60) % 24;
+      const endM = totalMins % 60;
+      
+      const endPeriod = endH >= 12 ? 'PM' : 'AM';
+      const displayEndH = endH % 12 === 0 ? 12 : endH % 12;
+      const endLabel = `${displayEndH}:${String(endM).padStart(2, '0')} ${endPeriod}`;
+
       return `${startLabel} → ${endLabel}`;
     }
 
-    // Fallback
-    const slot = this.timelineSlots.find(s => s.iso === this.selectedTimeSlot);
-    return slot ? slot.label : startLabel;
+    return startLabel;
   }
 
   /** Duration label shown in confirm modal */
