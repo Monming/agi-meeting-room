@@ -1,0 +1,10 @@
+node_modules/
+.idea/
+.vscode/
+*.log
+.env
+dist/
+www/
+.angular/
+android/
+ios/

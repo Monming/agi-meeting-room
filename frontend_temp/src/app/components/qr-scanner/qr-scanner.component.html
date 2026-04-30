@@ -1,0 +1,9 @@
+<div class="scanner-container">
+  <div *ngIf="!scanner" class="scanner-placeholder">
+    <ion-icon name="qr-code-outline"></ion-icon>
+    <p>Tap to scan room QR code</p>
+    <ion-button (click)="startScanner()">Start Scanner</ion-button>
+  </div>
+  
+  <div id="reader" [hidden]="!scanner"></div>
+</div>

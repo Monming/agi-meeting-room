@@ -1,0 +1,13 @@
+<ion-item class="filter-item">
+  <ion-icon name="options-outline" slot="start"></ion-icon>
+  <ion-select 
+    placeholder="Filter by Amenities" 
+    [multiple]="true" 
+    (ionChange)="onFilterChange($event)">
+    <ion-select-option 
+      *ngFor="let amenity of availableAmenities" 
+      [value]="amenity">
+      {{ amenity }}
+    </ion-select-option>
+  </ion-select>
+</ion-item>

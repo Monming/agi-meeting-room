@@ -1,0 +1,53 @@
+.date-picker-container {
+  width: 100%;
+  overflow-x: auto;
+  background-color: transparent;
+  
+  /* Hide scrollbar for a cleaner look */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.date-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  padding: 0 16px;
+}
+
+.date-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 64px;
+  margin-right: 12px;
+  border-radius: 24px;
+  background-color: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  .day-name {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+
+  .day-number {
+    font-size: 16px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  &.selected {
+    background-color: var(--ion-color-primary);
+
+    .day-name, .day-number {
+      color: #000;
+      font-weight: bold;
+    }
+  }
+}

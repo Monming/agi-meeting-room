@@ -1,0 +1,126 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="home-toolbar">
+    <div class="toolbar-inner">
+      <div class="greeting-block">
+        <p class="greeting-sub">{{ greeting }},</p>
+        <h1 class="greeting-name">{{ userName }} 👋</h1>
+      </div>
+      <div class="toolbar-right">
+        <span class="clock">{{ currentTime }}</span>
+        <ion-avatar class="avatar">
+          <ion-icon name="person-circle-outline"></ion-icon>
+        </ion-avatar>
+      </div>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="home-content">
+
+  <!-- Loading skeleton -->
+  <div *ngIf="isLoading" class="skeleton-wrap">
+    <ion-skeleton-text animated class="skel-line"></ion-skeleton-text>
+    <ion-skeleton-text animated class="skel-card"></ion-skeleton-text>
+    <ion-skeleton-text animated class="skel-card"></ion-skeleton-text>
+  </div>
+
+  <div *ngIf="!isLoading">
+
+    <!-- Quick Book CTA -->
+    <div class="cta-banner" (click)="goToBook()">
+      <div class="cta-text">
+        <span class="cta-label">Need a room?</span>
+        <span class="cta-sub">Check availability now</span>
+      </div>
+      <ion-button fill="solid" class="cta-btn" size="small">
+        <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+        Book Now
+      </ion-button>
+    </div>
+
+    <!-- Today's Schedule -->
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Today's Schedule</h2>
+        <span class="section-count">{{ todayBookings.length }} meetings</span>
+      </div>
+
+      <div *ngIf="todayBookings.length === 0" class="empty-state">
+        <ion-icon name="calendar-outline" class="empty-icon"></ion-icon>
+        <p>No bookings for today</p>
+        <ion-button fill="outline" size="small" (click)="goToBook()">Book a Room</ion-button>
+      </div>
+
+      <div class="timeline" *ngIf="todayBookings.length > 0">
+        <div
+          class="timeline-item"
+          *ngFor="let booking of todayBookings"
+          [class.active]="isActive(booking)"
+          [class.upcoming]="isUpcoming(booking)">
+
+          <div class="timeline-dot" [class.dot-active]="isActive(booking)"></div>
+
+          <div class="timeline-card">
+            <div class="tl-header">
+              <span class="tl-title">{{ booking.title }}</span>
+              <span class="tl-badge" [class.badge-active]="isActive(booking)" [class.badge-upcoming]="isUpcoming(booking)">
+                {{ isActive(booking) ? 'LIVE' : 'Upcoming' }}
+              </span>
+            </div>
+            <p class="tl-room">
+              <ion-icon name="location-outline"></ion-icon>
+              {{ getBookingRoom(booking) }}
+            </p>
+            <p class="tl-time">
+              <ion-icon name="time-outline"></ion-icon>
+              {{ getBookingTime(booking) }}
+            </p>
+            <div class="tl-actions" *ngIf="isActive(booking) && !booking.isCheckedIn">
+              <ion-button size="small" fill="solid" (click)="checkIn(booking)">Check In</ion-button>
+              <ion-button size="small" fill="outline" color="danger" (click)="cancelBooking(booking)">Cancel</ion-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Available Now -->
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Available Now</h2>
+        <span class="section-count link" (click)="goToBook()">View all →</span>
+      </div>
+
+      <div *ngIf="availableRooms.length === 0" class="empty-state">
+        <p>No rooms available at this time</p>
+      </div>
+
+      <div class="rooms-scroll" *ngIf="availableRooms.length > 0">
+        <div class="room-chip-card" *ngFor="let room of availableRooms" (click)="goToBook()">
+          <div class="room-chip-top">
+            <span class="room-chip-name">{{ room.name }}</span>
+            <span class="room-status-dot"></span>
+          </div>
+          <p class="room-chip-cap">
+            <ion-icon name="people-outline"></ion-icon>
+            {{ room.capacity }} people
+          </p>
+          <p class="room-chip-loc">
+            <ion-icon name="location-outline"></ion-icon>
+            {{ room.floor }}
+          </p>
+          <div class="room-amenities-row">
+            <ion-icon
+              *ngFor="let am of room.amenities.slice(0,3)"
+              [name]="getAmenityIcon(am)"
+              class="amenity-icon"
+              [title]="am">
+            </ion-icon>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+</ion-content>

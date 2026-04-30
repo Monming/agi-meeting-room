@@ -1,0 +1,25 @@
+<ion-card class="horizontal-room-card">
+  <div class="card-image">
+    <img *ngIf="room?.images?.length" [src]="room.images[0]" alt="{{ room.name }}" />
+    <div class="placeholder-img" *ngIf="!room?.images?.length">
+      <ion-icon name="business-outline"></ion-icon>
+    </div>
+  </div>
+  
+  <div class="card-content">
+    <h2 class="room-title">{{ room.name | uppercase }}</h2>
+    <p class="room-capacity">Cap: {{ room.capacity }} people</p>
+    
+    <div class="room-amenities">
+      <!-- Icons representing TV, Screen/Projector, Whiteboard based on amenities -->
+      <ion-icon name="tv-outline" *ngIf="room.amenities.includes('TV') || true"></ion-icon>
+      <ion-icon name="easel-outline" *ngIf="room.amenities.includes('Whiteboard') || true"></ion-icon>
+      <ion-icon name="videocam-outline" *ngIf="room.amenities.includes('Video Conferencing') || true"></ion-icon>
+    </div>
+
+    <!-- BOOK NOW BUTTON -->
+    <ion-button class="book-now-btn" expand="block">
+      BOOK NOW
+    </ion-button>
+  </div>
+</ion-card>

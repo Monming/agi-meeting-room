@@ -1,0 +1,38 @@
+<ion-card class="room-card">
+  <img *ngIf="room?.images?.length" [src]="room.images[0]" alt="{{ room.name }}" />
+  <div class="placeholder-img" *ngIf="!room?.images?.length">
+    <ion-icon name="business-outline"></ion-icon>
+  </div>
+  
+  <ion-card-header>
+    <div class="header-content">
+      <ion-card-title>{{ room.name }}</ion-card-title>
+      <ion-badge [color]="room.status === 0 ? 'success' : (room.status === 1 ? 'danger' : 'warning')">
+        {{ room.status === 0 ? 'Available' : (room.status === 1 ? 'Occupied' : 'Reserved') }}
+      </ion-badge>
+    </div>
+    <ion-card-subtitle>Capacity: {{ room.capacity }}</ion-card-subtitle>
+  </ion-card-header>
+
+  <ion-card-content>
+    <div class="amenities">
+      <span class="amenity-tag" *ngFor="let amenity of room.amenities">{{ amenity }}</span>
+    </div>
+
+    <!-- Occupancy UI -->
+    <div class="occupancy-section" *ngIf="currentBooking">
+      <div class="progress-header">
+        <span class="status-text">{{ timeRemainingText }}</span>
+      </div>
+      <ion-progress-bar [value]="progress" [color]="progress > 0.8 ? 'danger' : 'primary'"></ion-progress-bar>
+    </div>
+
+    <!-- Check-in Feature -->
+    <div class="action-section" *ngIf="showCheckIn">
+      <ion-button expand="block" color="success" (click)="onCheckIn()">
+        <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+        Check-In Now
+      </ion-button>
+    </div>
+  </ion-card-content>
+</ion-card>

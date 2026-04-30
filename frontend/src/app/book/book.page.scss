@@ -1,0 +1,603 @@
+.book-toolbar {
+  --background: #0f172a;
+  --border-width: 0;
+
+  .book-title {
+    font-weight: 700;
+    color: #e5e7eb;
+    font-size: 20px;
+  }
+
+  .toolbar-icon { color: #3b82f6; font-size: 22px; }
+}
+
+.book-content {
+  --background: #0f172a;
+  --padding-bottom: 80px;
+}
+
+/* Division container */
+.division {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  margin: 16px;
+  padding: 20px;
+
+  .division-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    .division-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e5e7eb;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      ion-icon { color: #3b82f6; font-size: 18px; }
+    }
+
+    .availability-badge {
+      background: rgba(59,130,246,0.12);
+      color: #3b82f6;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      min-width: 90px;
+      text-align: center;
+
+      &.loading { opacity: 0.7; }
+      .tiny-spinner { width: 14px; height: 14px; }
+    }
+  }
+}
+
+/* Step */
+.step {
+  margin-bottom: 20px;
+
+  .step-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      background: #3b82f6;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    ion-icon { font-size: 16px; }
+  }
+}
+
+/* Search */
+.search-wrap {
+  position: relative;
+
+  .book-searchbar {
+    --background: #0f172a;
+    --color: #e5e7eb;
+    --placeholder-color: #64748b;
+    --icon-color: #64748b;
+    --border-radius: 10px;
+    --box-shadow: none;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0;
+  }
+
+  .suggestions-box {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    overflow: hidden;
+
+    .suggestion-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      color: #e5e7eb;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #334155;
+      transition: background 0.15s;
+
+      &:last-child { border-bottom: none; }
+      &:active { background: #334155; }
+
+      ion-icon { color: #3b82f6; font-size: 16px; }
+
+      .sug-cap {
+        margin-left: auto;
+        font-size: 12px;
+        color: #64748b;
+      }
+    }
+  }
+}
+
+/* Capacity Chips */
+.chips-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+
+  &::-webkit-scrollbar { display: none; }
+
+  ion-chip {
+    --background: #0f172a;
+    --color: #94a3b8;
+    border: 1px solid #334155;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: all 0.2s;
+
+    &.chip-active {
+      --background: #3b82f6;
+      --color: #ffffff;
+      border-color: #3b82f6;
+    }
+  }
+}
+
+/* Date picker */
+.datetime-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #334155;
+
+  .book-datetime {
+    --background: #0f172a;
+    --color: #e5e7eb;
+    --title-color: #e5e7eb;
+    width: 100%;
+  }
+}
+
+/* Time slots */
+.slots-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+
+  &::-webkit-scrollbar { display: none; }
+
+  .slot-chip {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e5e7eb;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    &.slot-selected {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+
+    &.slot-disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+  }
+}
+
+/* Room Results */
+.results-section {
+  border-top: 1px solid #334155;
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+.room-result-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+
+  &:hover { border-color: #3b82f6; }
+
+  .room-result-left {
+    flex: 1;
+
+    .room-result-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #e5e7eb;
+      margin-bottom: 4px;
+    }
+
+    .room-result-meta {
+      font-size: 12px;
+      color: #64748b;
+      margin: 0 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      ion-icon { font-size: 13px; }
+    }
+
+    .amenity-icons {
+      display: flex;
+      gap: 8px;
+
+      ion-icon { font-size: 16px; color: #3b82f6; }
+    }
+  }
+
+  .book-btn {
+    --background: #3b82f6;
+    --border-radius: 8px;
+    --color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+}
+
+.no-results {
+  text-align: center;
+  padding: 24px 0;
+  color: #64748b;
+
+  ion-icon { font-size: 36px; display: block; margin-bottom: 8px; }
+  p { font-size: 14px; margin: 0 0 12px; }
+}
+
+/* Calendar Section */
+.legend-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #94a3b8;
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+  }
+}
+
+.room-segment-scroll {
+  overflow-x: auto;
+  margin-bottom: 14px;
+
+  &::-webkit-scrollbar { display: none; }
+
+  .room-segment {
+    background: #0f172a;
+    border-radius: 8px;
+    min-width: max-content;
+
+    ion-segment-button {
+      --color: #64748b;
+      --color-checked: #e5e7eb;
+      --indicator-color: #3b82f6;
+      font-size: 12px;
+      font-weight: 600;
+    }
+  }
+}
+
+.calendar-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #334155;
+
+  .master-calendar {
+    --background: #0f172a;
+    --color: #e5e7eb;
+    width: 100%;
+  }
+}
+
+/* Day Sheet Modal */
+.day-sheet-modal {
+  --background: #1e293b;
+  --border-radius: 20px 20px 0 0;
+}
+
+.day-sheet-content {
+  --background: #1e293b;
+  --padding-start: 20px;
+  --padding-end: 20px;
+}
+
+.drag-pill {
+  width: 36px;
+  height: 4px;
+  background: #475569;
+  border-radius: 2px;
+  margin: 10px auto 20px;
+}
+
+.sheet-date-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e5e7eb;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.sheet-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+
+  ion-spinner { --color: #3b82f6; }
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 20px;
+
+  .schedule-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 10px;
+
+    &.row-booked { border-color: rgba(239,68,68,0.25); }
+
+    .schedule-time {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+      min-width: 68px;
+    }
+
+    .schedule-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .schedule-status {
+        font-size: 12px;
+        font-weight: 700;
+        color: #ef4444;
+
+        &.status-available { color: #22c55e; }
+      }
+
+      .booking-title {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+    }
+  }
+}
+
+/* Confirm modal — redesigned icon-row layout */
+.confirm-content {
+  --background: #1e293b;
+  --padding-start: 20px;
+  --padding-end: 20px;
+}
+
+.confirm-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e5e7eb;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.confirm-details {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 8px 16px;
+  margin-bottom: 20px;
+}
+
+.confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(51,65,85,0.5);
+
+  &:last-child { border-bottom: none; }
+
+  ion-icon {
+    font-size: 18px;
+    color: #3b82f6;
+    flex-shrink: 0;
+  }
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .confirm-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .confirm-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e5e7eb;
+  }
+}
+
+.confirm-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-top: 10px;
+  margin-bottom: 20px;
+
+  ion-button {
+    flex: 1;
+    --border-radius: 10px;
+    font-weight: 600;
+  }
+}
+
+/* ── Duration Chips ─────────────────────────────────────── */
+.duration-chips-row {
+  ion-chip {
+    &.chip-custom-active {
+      --background: rgba(139,92,246,0.18);
+      --color: #a78bfa;
+      border-color: #7c3aed;
+    }
+  }
+}
+
+/* ── Custom Duration Input ──────────────────────────────── */
+.custom-duration-wrap {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .custom-duration-input {
+    --background: #0f172a;
+    --color: #e5e7eb;
+    --placeholder-color: #64748b;
+    --border-radius: 8px;
+    border: 1px solid #7c3aed;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .custom-duration-hint {
+    font-size: 11px;
+    color: #64748b;
+    padding-left: 4px;
+  }
+}
+
+/* ── Duration badge near step label ─────────────────────── */
+.duration-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(59,130,246,0.3);
+  margin-left: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Timeslot loading spinner ────────────────────────────── */
+.timeslot-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 4px;
+  color: #64748b;
+  font-size: 13px;
+
+  .slot-spinner {
+    --color: #3b82f6;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* ── Slot range label (e.g. "10:00 AM → 11:30 AM") ─────── */
+.slot-range-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 8px;
+  width: fit-content;
+
+  ion-icon {
+    color: #3b82f6;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  span {
+    font-size: 13px;
+    font-weight: 700;
+    color: #60a5fa;
+  }
+}
+
+/* ── No slots placeholder ───────────────────────────────── */
+.slots-empty {
+  font-size: 13px;
+  color: #64748b;
+  padding: 10px 4px;
+
+  p { margin: 0; }
+}
+
+/* ── No Results Placeholder ───────────────────────────────── */
+.results-section-placeholder {
+  p { margin: 0; }
+}
+

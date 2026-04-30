@@ -1,0 +1,242 @@
+.settings-toolbar {
+  --background: #0f172a;
+  --border-width: 0;
+
+  .settings-title { font-weight: 700; color: #e5e7eb; font-size: 20px; }
+}
+
+.settings-content {
+  --background: #0f172a;
+  --padding-bottom: 80px;
+}
+
+/* Section */
+.settings-section {
+  margin: 16px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  overflow: hidden;
+
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 16px 16px 0;
+  }
+
+  .section-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    cursor: pointer;
+
+    .section-label { padding: 0; }
+    .toggle-icon { font-size: 18px; color: #94a3b8; }
+  }
+}
+
+/* Profile Card */
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-bottom: 1px solid #334155;
+
+  .profile-avatar {
+    ion-icon { font-size: 56px; color: #3b82f6; }
+  }
+
+  .profile-info {
+    .profile-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #e5e7eb;
+      margin: 0 0 4px;
+    }
+
+    .profile-email {
+      font-size: 13px;
+      color: #94a3b8;
+      margin: 0 0 8px;
+    }
+
+    .role-badge {
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(59,130,246,0.12);
+      color: #3b82f6;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+/* List items */
+.settings-list {
+  background: transparent;
+  padding: 0 8px 8px;
+
+  .settings-item {
+    --background: transparent;
+    --border-radius: 10px;
+    --inner-padding-end: 0;
+    margin-bottom: 4px;
+
+    .item-icon {
+      font-size: 20px;
+      color: #3b82f6;
+      margin-right: 12px;
+    }
+
+    .item-label {
+      font-size: 11px;
+      color: #64748b;
+      margin: 0 0 2px;
+    }
+
+    .item-input {
+      --color: #e5e7eb;
+      --placeholder-color: #475569;
+      font-size: 15px;
+    }
+
+    ion-label {
+      color: #e5e7eb;
+      font-size: 14px;
+    }
+
+    .custom-toggle {
+      --track-background: #334155;
+      --track-background-checked: #3b82f6;
+    }
+  }
+}
+
+/* Admin Panel */
+.admin-panel {
+  padding: 0 16px 16px;
+
+  .add-room-btn {
+    --background: #3b82f6;
+    --border-radius: 10px;
+    --color: #fff;
+    font-weight: 600;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+}
+
+.add-room-form {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+
+  .amenities-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 12px 0 8px;
+  }
+
+  .amenities-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+
+    ion-chip {
+      --background: #1e293b;
+      --color: #94a3b8;
+      border: 1px solid #334155;
+      font-size: 12px;
+
+      &.chip-active {
+        --background: #3b82f6;
+        --color: #fff;
+        border-color: #3b82f6;
+      }
+    }
+  }
+
+  .save-btn {
+    --background: #22c55e;
+    --border-radius: 10px;
+    font-weight: 600;
+  }
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  ion-spinner { --color: #3b82f6; }
+}
+
+.admin-room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .admin-room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 12px 14px;
+
+    .admin-room-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .admin-room-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e5e7eb;
+      }
+
+      .admin-room-meta {
+        font-size: 12px;
+        color: #64748b;
+      }
+    }
+
+    .admin-room-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .status-chip-small {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        height: 24px;
+
+        &.s-0 { --background: rgba(34,197,94,0.15); --color: #22c55e; }
+        &.s-1 { --background: rgba(239,68,68,0.15); --color: #ef4444; }
+        &.s-2 { --background: rgba(234,179,8,0.15); --color: #eab308; }
+        &.s-3 { --background: rgba(59,130,246,0.15); --color: #3b82f6; }
+      }
+    }
+  }
+}
+
+.app-info {
+  text-align: center;
+  padding: 20px;
+  color: #475569;
+  font-size: 12px;
+  p { margin: 0 0 4px; }
+}

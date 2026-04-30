@@ -1,0 +1,15 @@
+<div class="date-picker-container">
+  <div class="date-scroll">
+    <div 
+      class="date-item" 
+      *ngFor="let date of dates" 
+      [class.selected]="isSelected(date)"
+      (click)="selectDate(date)">
+      
+      <span class="day-name">{{ date | date:'EEE' }}</span>
+      <span class="day-number">{{ date | date:'dd' }}</span>
+      <span class="month-name">{{ date | date:'MMM' }}</span>
+      
+    </div>
+  </div>
+</div>

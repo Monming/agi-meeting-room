@@ -1,0 +1,80 @@
+.horizontal-room-card {
+  display: flex;
+  flex-direction: row;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin: 0 0 16px 0;
+  padding: 12px;
+  background-color: var(--custom-card-bg);
+
+  .card-image {
+    width: 120px;
+    height: 100px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .placeholder-img {
+      width: 100%;
+      height: 100%;
+      background-color: #333; /* Darker placeholder for dark theme layout */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      ion-icon {
+        font-size: 32px;
+        color: #888;
+      }
+    }
+  }
+
+  .card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-left: 16px;
+    justify-content: space-between;
+
+    .room-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--custom-card-text);
+      margin: 0 0 4px 0;
+      letter-spacing: 0.5px;
+    }
+
+    .room-capacity {
+      font-size: 12px;
+      color: #666;
+      margin: 0 0 8px 0;
+    }
+
+    .room-amenities {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+
+      ion-icon {
+        font-size: 18px;
+        color: #333;
+      }
+    }
+
+    .book-now-btn {
+      --background: var(--ion-color-primary);
+      --color: var(--ion-color-primary-contrast);
+      --border-radius: 6px;
+      margin: 0;
+      font-size: 12px;
+      font-weight: 600;
+      height: 32px;
+    }
+  }
+}

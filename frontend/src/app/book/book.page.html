@@ -1,0 +1,328 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="book-toolbar">
+    <ion-title class="book-title">Book a Room</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="clearFilters()">
+        <ion-icon name="refresh-outline" slot="icon-only" class="toolbar-icon"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="book-content">
+
+  <!-- ════════════════════════════════════════
+       DIVISION 1 — STEP-WISE SMART FILTER
+       ════════════════════════════════════════ -->
+  <div class="division">
+    <div class="division-header">
+      <h2 class="division-title">
+        <ion-icon name="filter-outline"></ion-icon>
+        Find a Room
+      </h2>
+      <span class="availability-badge" [class.loading]="isFilterLoading">
+        <ion-spinner *ngIf="isFilterLoading" name="dots" class="tiny-spinner"></ion-spinner>
+        <span *ngIf="!isFilterLoading">{{ availableCount }} rooms match</span>
+      </span>
+    </div>
+
+    <!-- Step 1: Capacity Chips -->
+    <div class="step">
+      <p class="step-label">
+        <span class="step-num">1</span> Capacity
+      </p>
+      <div class="chips-row">
+        <ion-chip
+          *ngFor="let cap of capacities"
+          [class.chip-active]="selectedCapacity === cap"
+          (click)="selectCapacity(cap)">
+          <ion-icon name="people-outline"></ion-icon>
+          <ion-label>{{ cap }}</ion-label>
+        </ion-chip>
+      </div>
+    </div>
+
+    <!-- Step 2: Date Picker -->
+    <div class="step">
+      <p class="step-label">
+        <span class="step-num">2</span> Pick a Date
+      </p>
+      <div class="datetime-wrap">
+        <ion-datetime
+          presentation="date"
+          size="cover"
+          [value]="selectedDate"
+          (ionChange)="onDateChange($event)"
+          class="book-datetime">
+        </ion-datetime>
+      </div>
+    </div>
+
+    <!-- Step 3: Duration Selector -->
+    <div class="step">
+      <p class="step-label">
+        <span class="step-num">3</span> Meeting Duration
+      </p>
+      <div class="chips-row duration-chips-row">
+        <ion-chip
+          *ngFor="let opt of durationOptions"
+          [class.chip-active]="selectedDuration === opt.value && opt.value !== 0"
+          [class.chip-custom-active]="opt.value === 0 && showCustomDurationInput"
+          (click)="selectDuration(opt)">
+          <ion-icon name="time-outline"></ion-icon>
+          <ion-label>{{ opt.label }}</ion-label>
+        </ion-chip>
+      </div>
+      <!-- Custom duration input -->
+      <div class="custom-duration-wrap" *ngIf="showCustomDurationInput">
+        <ion-input
+          type="number"
+          placeholder="Minutes (15–240)"
+          class="custom-duration-input"
+          [min]="15"
+          [max]="240"
+          (ionChange)="onCustomDurationChange($event)">
+        </ion-input>
+        <span class="custom-duration-hint">Enter duration in minutes (15–240)</span>
+      </div>
+    </div>
+
+    <!-- Step 4: Time Slots (API-driven) -->
+    <div class="step">
+      <p class="step-label">
+        <span class="step-num">4</span> Select Time Slot
+        <span class="duration-badge" *ngIf="effectiveDuration > 0">{{ getDurationLabel() }}</span>
+      </p>
+
+      <!-- Loading state -->
+      <div class="timeslot-loading" *ngIf="isTimeslotLoading">
+        <ion-spinner name="dots" class="slot-spinner"></ion-spinner>
+        <span>Loading availability…</span>
+      </div>
+
+      <!-- Slot chips -->
+      <div class="slots-scroll" *ngIf="!isTimeslotLoading && timelineSlots.length > 0">
+        <div
+          class="slot-chip"
+          *ngFor="let slot of timelineSlots"
+          [class.slot-selected]="selectedTimeSlot === slot.iso"
+          [class.slot-disabled]="!slot.available"
+          (click)="selectTimeSlot(slot)">
+          {{ slot.label }}
+        </div>
+      </div>
+
+      <div class="slots-empty" *ngIf="!isTimeslotLoading && timelineSlots.length === 0">
+        <p>No rooms available for selected duration</p>
+        <p style="font-size: 11px; margin-top: 4px; color: #94a3b8;">Try shorter duration or different time</p>
+      </div>
+
+      <!-- Selected range label -->
+      <div class="slot-range-label" *ngIf="selectedTimeSlot">
+        <ion-icon name="time-outline"></ion-icon>
+        <span>{{ getSelectedSlotLabel() }} ({{ getDurationLabel() }})</span>
+      </div>
+    </div>
+
+    <!-- Step 5: Available Rooms Results -->
+    <div class="step" style="margin-top: 30px;">
+      <p class="step-label" style="margin-bottom: 12px;">
+        <span class="step-num">5</span> Available Rooms
+      </p>
+
+      <div class="results-section-placeholder" *ngIf="!selectedTimeSlot" style="padding: 20px; text-align: center; color: #64748b; background: rgba(51, 65, 85, 0.2); border-radius: 8px;">
+        <p>Please select a time slot to view available rooms.</p>
+      </div>
+
+      <div class="results-section" *ngIf="selectedTimeSlot && availableRooms.length > 0">
+        <div class="room-result-card" *ngFor="let room of availableRooms">
+          <div class="room-result-left">
+            <div class="room-result-name">{{ room.name }}</div>
+            <p class="room-result-meta">
+              <ion-icon name="people-outline"></ion-icon> {{ room.capacity }} pax &nbsp;
+              <ion-icon name="location-outline"></ion-icon> {{ room.floor }}
+            </p>
+            <div class="amenity-icons">
+              <ion-icon
+                *ngFor="let am of room.amenities.slice(0,4)"
+                [name]="getAmenityIcon(am)"
+                [title]="am">
+              </ion-icon>
+            </div>
+          </div>
+          <ion-button
+            fill="solid"
+            size="small"
+            class="book-btn"
+            [disabled]="!selectedTimeSlot || !effectiveDuration"
+            (click)="openConfirm(room)">
+            BOOK
+          </ion-button>
+        </div>
+      </div>
+
+      <div class="no-results" *ngIf="selectedTimeSlot && !isFilterLoading && availableRooms.length === 0">
+        <ion-icon name="sad-outline"></ion-icon>
+        <p>No rooms match your capacity filters for this time slot.</p>
+        <ion-button fill="outline" size="small" (click)="clearFilters()">Clear Filters</ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       DIVISION 2 — VISUAL CALENDAR
+       ════════════════════════════════════════ -->
+  <div class="division">
+    <div class="division-header">
+      <h2 class="division-title">
+        <ion-icon name="calendar-outline"></ion-icon>
+        Availability Calendar
+      </h2>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend-row">
+      <span class="legend-item">
+        <span class="dot" style="background:#22c55e"></span> &gt;50% free
+      </span>
+      <span class="legend-item">
+        <span class="dot" style="background:#eab308"></span> &lt;30% free
+      </span>
+      <span class="legend-item">
+        <span class="dot" style="background:#ef4444"></span> Fully booked
+      </span>
+    </div>
+
+    <!-- Room Toggle Filter -->
+    <div class="room-segment-scroll">
+      <ion-segment
+        [value]="selectedRoomFilter"
+        (ionChange)="onRoomFilterChange($event)"
+        mode="md"
+        class="room-segment">
+        <ion-segment-button value="all">
+          <ion-label>All</ion-label>
+        </ion-segment-button>
+        <ion-segment-button *ngFor="let r of allRooms.slice(0,5)" [value]="r.name">
+          <ion-label>{{ r.name }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Calendar -->
+    <div class="calendar-wrap">
+      <ion-datetime
+        presentation="date"
+        size="cover"
+        [highlightedDates]="highlightedDates"
+        (ionChange)="onCalendarTap($event)"
+        (ionMonthDidChange)="onMonthChange($event)"
+        class="master-calendar">
+      </ion-datetime>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       DAY SHEET MODAL
+       ════════════════════════════════════════ -->
+  <ion-modal
+    #daySheetModal
+    [isOpen]="isDaySheetOpen"
+    (didDismiss)="closeDaySheet()"
+    [initialBreakpoint]="0.55"
+    [breakpoints]="[0, 0.55, 0.9]"
+    class="day-sheet-modal">
+    <ng-template>
+      <ion-content class="day-sheet-content">
+        <div class="drag-pill"></div>
+        <h2 class="sheet-date-title">{{ formatDaySheetDate(daySheetDate) }}</h2>
+
+        <div class="sheet-loading" *ngIf="isDaySheetLoading">
+          <ion-spinner name="crescent"></ion-spinner>
+        </div>
+
+        <div class="schedule-list" *ngIf="!isDaySheetLoading">
+          <div
+            class="schedule-row"
+            *ngFor="let slot of daySheetSlots"
+            [class.row-booked]="slot.status === 'booked'">
+            <span class="schedule-time">{{ slot.label }}</span>
+            <div class="schedule-info">
+              <span class="schedule-status" [class.status-available]="slot.status === 'available'">
+                {{ slot.status === 'available' ? 'Available' : 'Booked' }}
+              </span>
+              <span class="booking-title" *ngIf="slot.bookings.length > 0">
+                {{ slot.bookings[0].title }} — {{ slot.bookings[0].userName }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ════════════════════════════════════════
+       CONFIRM BOOKING MODAL
+       ════════════════════════════════════════ -->
+  <ion-modal
+    [isOpen]="isConfirmOpen"
+    (didDismiss)="closeConfirm()"
+    [initialBreakpoint]="0.6"
+    [breakpoints]="[0, 0.6, 0.85]">
+    <ng-template>
+      <ion-content class="confirm-content">
+        <div class="drag-pill"></div>
+        <h3 class="confirm-title">Confirm Booking</h3>
+        <div class="confirm-details" *ngIf="selectedRoomToBook">
+          <div class="confirm-row">
+            <ion-icon name="business-outline"></ion-icon>
+            <div>
+              <span class="confirm-label">Room</span>
+              <span class="confirm-value">{{ selectedRoomToBook.name }}</span>
+            </div>
+          </div>
+          <div class="confirm-row">
+            <ion-icon name="calendar-outline"></ion-icon>
+            <div>
+              <span class="confirm-label">Date</span>
+              <span class="confirm-value">{{ selectedDate }}</span>
+            </div>
+          </div>
+          <div class="confirm-row">
+            <ion-icon name="time-outline"></ion-icon>
+            <div>
+              <span class="confirm-label">Time</span>
+              <span class="confirm-value">{{ getSelectedSlotLabel() }}</span>
+            </div>
+          </div>
+          <div class="confirm-row">
+            <ion-icon name="hourglass-outline"></ion-icon>
+            <div>
+              <span class="confirm-label">Duration</span>
+              <span class="confirm-value">{{ getDurationLabel() }}</span>
+            </div>
+          </div>
+          <div class="confirm-row">
+            <ion-icon name="people-outline"></ion-icon>
+            <div>
+              <span class="confirm-label">Capacity</span>
+              <span class="confirm-value">{{ selectedRoomToBook.capacity }} people</span>
+            </div>
+          </div>
+        </div>
+        <div class="confirm-actions">
+          <ion-button fill="outline" expand="block" (click)="closeConfirm()">Cancel</ion-button>
+          <ion-button
+            fill="solid"
+            expand="block"
+            [disabled]="!canConfirmBooking"
+            (click)="confirmBooking()">
+            Confirm Booking
+          </ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+</ion-content>
+

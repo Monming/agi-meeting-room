@@ -1,0 +1,11 @@
+.filter-item {
+  --background: transparent;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: 1px solid var(--ion-color-light-shade);
+  
+  ion-select {
+    width: 100%;
+    max-width: 100%;
+  }
+}

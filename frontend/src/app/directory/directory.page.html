@@ -1,0 +1,97 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="dir-toolbar">
+    <ion-title class="dir-title">Room Directory</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="clearFilters()">
+        <ion-icon name="close-circle-outline" slot="icon-only" style="color: #3b82f6;"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="dir-content">
+
+  <!-- Search -->
+  <div class="search-area">
+    <ion-searchbar
+      [value]="searchQuery"
+      (ionInput)="onSearchChange($event)"
+      placeholder="Search rooms..."
+      class="dir-searchbar">
+    </ion-searchbar>
+  </div>
+
+  <!-- Capacity Filter Chips -->
+  <div class="filter-row">
+    <span class="filter-label">Capacity:</span>
+    <ion-chip
+      *ngFor="let cap of capacities"
+      [class.chip-active]="selectedCapacity === cap"
+      (click)="selectCapacity(cap)">
+      {{ cap }}
+    </ion-chip>
+  </div>
+
+  <!-- Status Filter Chips -->
+  <div class="filter-row" style="padding-top: 0;">
+    <span class="filter-label">Status:</span>
+    <ion-chip
+      *ngFor="let s of statusFilters"
+      [class.chip-active]="selectedStatus === s.value"
+      (click)="selectStatus(s.value)">
+      {{ s.label }}
+    </ion-chip>
+  </div>
+
+  <!-- Count -->
+  <p class="count-label">{{ filteredRooms.length }} room(s) found</p>
+
+  <!-- Loading Skeleton -->
+  <div *ngIf="isLoading" class="skeleton-area">
+    <ion-skeleton-text *ngFor="let i of [1,2,3,4]" animated class="skel-card"></ion-skeleton-text>
+  </div>
+
+  <!-- Room List -->
+  <div *ngIf="!isLoading" class="rooms-list">
+
+    <div *ngIf="filteredRooms.length === 0" class="empty-state">
+      <ion-icon name="search-outline"></ion-icon>
+      <p>No rooms match your criteria</p>
+    </div>
+
+    <div class="room-dir-card" *ngFor="let room of filteredRooms">
+      <div class="card-top">
+        <div class="card-name-group">
+          <h3 class="card-name">{{ room.name }}</h3>
+          <span class="card-status-badge" [ngClass]="getStatusClass(room.status)">
+            {{ getStatusLabel(room.status) }}
+          </span>
+        </div>
+      </div>
+
+      <div class="card-meta-row">
+        <span class="meta-pill">
+          <ion-icon name="people-outline"></ion-icon>
+          {{ room.capacity }} people
+        </span>
+        <span class="meta-pill">
+          <ion-icon name="location-outline"></ion-icon>
+          {{ room.floor }}
+        </span>
+        <span class="meta-pill">
+          <ion-icon name="business-outline"></ion-icon>
+          {{ room.location }}
+        </span>
+      </div>
+
+      <div class="card-amenities">
+        <div class="amenity-tag" *ngFor="let am of room.amenities">
+          <ion-icon [name]="getAmenityIcon(am)"></ion-icon>
+          <span>{{ am }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</ion-content>
