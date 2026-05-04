@@ -7,6 +7,14 @@ const RecurringBooking = require('../models/RecurringBooking');
 const { detectConflict, detectUserOverlap } = require('../utils/conflictDetection');
 const { validateBookingAgainstRules, getRulesForRoom } = require('../utils/bookingRulesValidator');
 const { expandRecurringBooking, previewRecurringConflicts } = require('../utils/recurringBookingExpander');
+const {
+  parseYmd,
+  addCalendarDays,
+  localWallClockToUtcMs,
+  readTzOffsetMinutes,
+  readTzOffsetFromQuery,
+  localCalendarYmdFromUtcNow,
+} = require('../utils/timezone');
 
 /* ─────────────────────────────────────────────────────────────
    HELPERS
@@ -30,12 +38,18 @@ exports.getDaySchedule = async (req, res) => {
     const { date, roomId } = req.query;
     if (!date) return res.status(400).json({ error: 'date query param required' });
 
-    const startOfDay = new Date(date); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay   = new Date(date); endOfDay.setHours(23, 59, 59, 999);
+    const tzQ = readTzOffsetFromQuery(req.query);
+    const tzOffsetMinutes = tzQ !== null ? tzQ : 0;
+    const { y, mo, d } = parseYmd(date);
+    const dayStartUtcMs = localWallClockToUtcMs(y, mo, d, 0, 0, 0, 0, tzOffsetMinutes);
+    const nd = addCalendarDays(y, mo, d, 1);
+    const nextMidnightUtcMs = localWallClockToUtcMs(nd.y, nd.mo, nd.d, 0, 0, 0, 0, tzOffsetMinutes);
+    const startOfDay = new Date(dayStartUtcMs);
+    const endExclusive = new Date(nextMidnightUtcMs);
 
     const query = {
       status: 'confirmed',
-      startTime: { $lt: endOfDay },
+      startTime: { $lt: endExclusive },
       endTime:   { $gt: startOfDay }
     };
     if (roomId) query.roomId = roomId;
@@ -46,11 +60,11 @@ exports.getDaySchedule = async (req, res) => {
       .sort({ startTime: 1 })
       .lean();
 
-    // Build 9AM–6PM hourly slots
+    // Build 9AM–6PM hourly slots (client-local hours; compares UTC correctly)
     const slots = [];
     for (let hour = 9; hour <= 17; hour++) {
-      const slotStart = new Date(date); slotStart.setHours(hour, 0, 0, 0);
-      const slotEnd   = new Date(date); slotEnd.setHours(hour + 1, 0, 0, 0);
+      const slotStart = new Date(localWallClockToUtcMs(y, mo, d, hour, 0, 0, 0, tzOffsetMinutes));
+      const slotEnd   = new Date(localWallClockToUtcMs(y, mo, d, hour + 1, 0, 0, 0, tzOffsetMinutes));
 
       const slotBookings = bookings.filter(b => {
         return new Date(b.startTime) < slotEnd && new Date(b.endTime) > slotStart;
@@ -83,16 +97,33 @@ exports.getDaySchedule = async (req, res) => {
    ───────────────────────────────────────────────────────────── */
 exports.getTodayBookings = async (req, res) => {
   try {
-    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
-
     if (!req.user?.id || !mongoose.Types.ObjectId.isValid(req.user.id)) {
       return res.status(401).json({ error: 'Invalid authenticated user' });
     }
 
+    const tzQ = readTzOffsetFromQuery(req.query);
+
+    let startTimeRange;
+    if (tzQ !== null && Number.isFinite(tzQ)) {
+      const { y, mo, d } = localCalendarYmdFromUtcNow(tzQ);
+      const dayStartUtcMs = localWallClockToUtcMs(y, mo, d, 0, 0, 0, 0, tzQ);
+      const nd = addCalendarDays(y, mo, d, 1);
+      const nextMidnightUtcMs = localWallClockToUtcMs(nd.y, nd.mo, nd.d, 0, 0, 0, 0, tzQ);
+      startTimeRange = {
+        $gte: new Date(dayStartUtcMs),
+        $lt: new Date(nextMidnightUtcMs)
+      };
+    } else {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+      startTimeRange = { $gte: startOfDay, $lte: endOfDay };
+    }
+
     const query = {
       status: 'confirmed',
-      startTime: { $gte: startOfDay, $lte: endOfDay },
+      startTime: startTimeRange,
       userId: new mongoose.Types.ObjectId(req.user.id)
     };
 
@@ -119,6 +150,7 @@ exports.getTodayBookings = async (req, res) => {
    ───────────────────────────────────────────────────────────── */
 exports.createBooking = async (req, res) => {
   const { roomId, startTime, endTime, title } = req.body;
+  const tzOffsetMinutes = readTzOffsetMinutes(req.body);
   const authUserId = req.user.id;
   const userName = req.user.name || 'User';
 
@@ -131,6 +163,14 @@ exports.createBooking = async (req, res) => {
   }
   const resolvedUserId = new mongoose.Types.ObjectId(authUserId);
 
+  if (process.env.BOOKING_TZ_DEBUG === '1') {
+    console.log('[booking/create]', {
+      tzOffsetMinutes,
+      startTimeUtc: new Date(startTime).toISOString(),
+      endTimeUtc: new Date(endTime).toISOString(),
+    });
+  }
+
   const session = await mongoose.startSession();
 
   try {
@@ -142,8 +182,13 @@ exports.createBooking = async (req, res) => {
       const room = await Room.findById(roomId).lean().session(session);
       if (!room) throw Object.assign(new Error('Room not found'), { status: 404 });
 
-      // 2. Validate against BookingRules (duration, advance booking, hours)
-      const ruleErrors = await validateBookingAgainstRules({ startTime, endTime, roomId });
+      // 2. Validate against BookingRules (opening hours interpreted in client's local zone)
+      const ruleErrors = await validateBookingAgainstRules({
+        startTime,
+        endTime,
+        roomId,
+        tzOffsetMinutes
+      });
       if (ruleErrors.length > 0) {
         throw Object.assign(new Error(ruleErrors.join('; ')), { status: 422 });
       }
@@ -207,6 +252,7 @@ exports.updateBooking = async (req, res) => {
   try {
     const { id } = req.params;
     const { startTime, endTime, roomId: newRoomId, title } = req.body;
+    const tzOffsetMinutes = readTzOffsetMinutes(req.body);
 
     if (!startTime || !endTime) {
       return res.status(400).json({ error: 'startTime and endTime are required' });
@@ -261,6 +307,17 @@ exports.updateBooking = async (req, res) => {
           new Error(`Time slot conflict with an existing booking (${fmt(conflict.startTime)} – ${fmt(conflict.endTime)})`),
           { status: 409, conflictDetails: { existingStart: conflict.startTime, existingEnd: conflict.endTime } }
         );
+      }
+
+      // 7b. Booking rules (client-local opening hours)
+      const ruleErrors = await validateBookingAgainstRules({
+        startTime: newStart,
+        endTime: newEnd,
+        roomId: targetRoomId,
+        tzOffsetMinutes
+      });
+      if (ruleErrors.length > 0) {
+        throw Object.assign(new Error(ruleErrors.join('; ')), { status: 422 });
       }
 
       // 8. Apply changes
@@ -371,6 +428,7 @@ exports.createRecurringBooking = async (req, res) => {
       roomId, recurrenceType, startTime, endTime,
       startDate, endDate, title, daysOfWeek, skipConflicts
     } = req.body;
+    const tzOffsetMinutes = readTzOffsetMinutes(req.body);
     const userId = req.user.id;
     const userName = req.user.name || 'User';
 
@@ -435,6 +493,19 @@ exports.createRecurringBooking = async (req, res) => {
         error: 'All occurrences have conflicts. No bookings were created.',
         skipped
       });
+    }
+
+    for (const occ of toCreate) {
+      const ruleErrors = await validateBookingAgainstRules({
+        startTime: occ.startTime,
+        endTime: occ.endTime,
+        roomId,
+        tzOffsetMinutes
+      });
+      if (ruleErrors.length > 0) {
+        await RecurringBooking.findByIdAndDelete(rule._id);
+        return res.status(422).json({ error: ruleErrors.join('; ') });
+      }
     }
 
     // Create all non-conflicting bookings (owner = JWT user only)
