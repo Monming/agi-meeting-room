@@ -3,42 +3,8 @@ const Booking   = require('../models/Booking');
 const Equipment = require('../models/Equipment');
 
 /**
- * JS Date#getTimezoneOffset() → minutes (UTC − local). Same value must be sent from the client.
- * Converts user's calendar wall-clock on `date` to an absolute UTC instant.
- */
-function localWallClockToUtcMs(y, mo, d, hour, minute, second, ms, tzOffsetMinutes) {
-  return Date.UTC(y, mo - 1, d, hour, minute, second || 0, ms || 0) + tzOffsetMinutes * 60000;
-}
-
-function utcMsToLocalWallClock(utcMs, tzOffsetMinutes) {
-  const shifted = utcMs - tzOffsetMinutes * 60000;
-  const x = new Date(shifted);
-  return { hours: x.getUTCHours(), minutes: x.getUTCMinutes() };
-}
-
-function parseYmd(dateStr) {
-  const [ys, mos, ds] = dateStr.split('-');
-  return {
-    y: parseInt(ys, 10),
-    mo: parseInt(mos, 10),
-    d: parseInt(ds, 10),
-  };
-}
-
-function addCalendarDays(y, mo, d, deltaDays) {
-  const x = new Date(Date.UTC(y, mo - 1, d));
-  x.setUTCDate(x.getUTCDate() + deltaDays);
-  return { y: x.getUTCFullYear(), mo: x.getUTCMonth() + 1, d: x.getUTCDate() };
-}
-
-function readTzOffsetMinutes(body) {
-  const v = body?.tzOffsetMinutes;
-  return typeof v === 'number' && Number.isFinite(v) ? v : 0;
-}
-
-/**
  * POST /api/rooms/availability-by-timeslots
- * Body: { date, durationMinutes, capacity?, query?, tzOffsetMinutes? }
+ * Body: { date, durationMinutes, capacity?, query? }
  *
  * Generates 30-min slots from 9AM–6PM for the given date.
  * For each slot: checks if at least one matching room is free
@@ -50,7 +16,6 @@ function readTzOffsetMinutes(body) {
 exports.getAvailabilityByTimeslots = async (req, res) => {
   try {
     const { date, durationMinutes, capacity, query } = req.body;
-    const tzOffsetMinutes = readTzOffsetMinutes(req.body);
 
     if (!date || !durationMinutes) {
       return res.status(400).json({ error: 'date and durationMinutes are required' });
@@ -60,8 +25,6 @@ exports.getAvailabilityByTimeslots = async (req, res) => {
     if (isNaN(durMs) || durMs <= 0) {
       return res.status(400).json({ error: 'durationMinutes must be a positive integer' });
     }
-
-    const { y, mo, d } = parseYmd(date);
 
     // ── Step 1: Fetch matching rooms ──────────────────────────────────
     const roomQuery = { isActive: true };
@@ -76,7 +39,8 @@ exports.getAvailabilityByTimeslots = async (req, res) => {
 
     const rooms = await Room.find(roomQuery).select('_id bufferMinutes').lean();
     if (rooms.length === 0) {
-      return res.json({ slots: buildEmptySlots(date, durMs, tzOffsetMinutes) });
+      // No rooms match filters — all slots unavailable
+      return res.json({ slots: buildEmptySlots(date, durMs) });
     }
 
     const roomIds = rooms.map(r => r._id);
@@ -85,38 +49,33 @@ exports.getAvailabilityByTimeslots = async (req, res) => {
     const bufferMap = {};
     rooms.forEach(r => { bufferMap[r._id.toString()] = (r.bufferMinutes || 0) * 60 * 1000; });
 
-    // ── Step 2: Bookings overlapping this calendar day in the user's TZ ───
-    const dayStartUtcMs = localWallClockToUtcMs(y, mo, d, 0, 0, 0, 0, tzOffsetMinutes);
-    const nd = addCalendarDays(y, mo, d, 1);
-    const nextMidnightUtcMs = localWallClockToUtcMs(nd.y, nd.mo, nd.d, 0, 0, 0, 0, tzOffsetMinutes);
-    const startOfDay = new Date(dayStartUtcMs);
-    const endExclusive = new Date(nextMidnightUtcMs);
+    // ── Step 2: Single query — all confirmed bookings for this date ───
+    const startOfDay = new Date(`${date}T00:00:00`);
+    const endOfDay   = new Date(`${date}T23:59:59.999`);
 
     const bookings = await Booking.find({
       roomId: { $in: roomIds },
       status: 'confirmed',
-      startTime: { $lt: endExclusive },
+      startTime: { $lt: endOfDay },
       endTime:   { $gt: startOfDay }
     }).select('roomId startTime endTime').lean();
 
-    // ── Step 3: Generate 30-min slots 9AM → 6PM (local wall clock) ─────────
+    // ── Step 3: Generate 30-min slots 9AM → 6PM ───────────────────────
     const slots = [];
     const SLOT_STEP_MS = 30 * 60 * 1000; // 30 min increments
     const DAY_START_H  = 9;
-    const DAY_END_H    = 18; // last slot must END by 18:00 local
+    const DAY_END_H    = 18; // last slot must END by 18:00
 
-    let cursorMs = localWallClockToUtcMs(y, mo, d, DAY_START_H, 0, 0, 0, tzOffsetMinutes);
+    let cursor = new Date(`${date}T00:00:00`);
+    cursor.setHours(DAY_START_H, 0, 0, 0);
 
     while (true) {
-      const slotEndMs = cursorMs + durMs;
-      const slotStart = new Date(cursorMs);
-      const slotEnd   = new Date(slotEndMs);
+      const slotStart = new Date(cursor.getTime());
+      const slotEnd   = new Date(cursor.getTime() + durMs);
 
-      const startWall = utcMsToLocalWallClock(cursorMs, tzOffsetMinutes);
-      const endWall   = utcMsToLocalWallClock(slotEndMs, tzOffsetMinutes);
-
-      if (endWall.hours > DAY_END_H || (endWall.hours === DAY_END_H && endWall.minutes > 0)) break;
-      if (startWall.hours >= DAY_END_H) break;
+      // Don't create slots that would run past 6 PM
+      if (slotEnd.getHours() > DAY_END_H || (slotEnd.getHours() === DAY_END_H && slotEnd.getMinutes() > 0)) break;
+      if (slotStart.getHours() >= DAY_END_H) break;
 
       // Check: is there at least one room free for [slotStart, slotEnd]?
       const available = rooms.some(room => {
@@ -136,8 +95,9 @@ exports.getAvailabilityByTimeslots = async (req, res) => {
         });
       });
 
-      const h = startWall.hours;
-      const m = startWall.minutes;
+      // Format label
+      const h = slotStart.getHours();
+      const m = slotStart.getMinutes();
       const period = h < 12 ? 'AM' : 'PM';
       const displayH = h % 12 === 0 ? 12 : h % 12;
       const label = `${displayH}:${String(m).padStart(2, '0')} ${period}`;
@@ -149,7 +109,7 @@ exports.getAvailabilityByTimeslots = async (req, res) => {
         available
       });
 
-      cursorMs += SLOT_STEP_MS;
+      cursor = new Date(cursor.getTime() + SLOT_STEP_MS);
     }
 
     res.json({ slots });
@@ -160,31 +120,19 @@ exports.getAvailabilityByTimeslots = async (req, res) => {
 };
 
 /** Helper: return all slots marked unavailable (used when no rooms match filters) */
-function buildEmptySlots(date, durMs, tzOffsetMinutes = 0) {
+function buildEmptySlots(date, durMs) {
   const slots = [];
   const SLOT_STEP_MS = 30 * 60 * 1000;
-  const DAY_END_H = 18;
-  const { y, mo, d } = parseYmd(date);
-  let cursorMs = localWallClockToUtcMs(y, mo, d, 9, 0, 0, 0, tzOffsetMinutes);
-  while (true) {
-    const slotEndMs = cursorMs + durMs;
-    const startWall = utcMsToLocalWallClock(cursorMs, tzOffsetMinutes);
-    const endWall = utcMsToLocalWallClock(slotEndMs, tzOffsetMinutes);
-    if (endWall.hours > DAY_END_H || (endWall.hours === DAY_END_H && endWall.minutes > 0)) break;
-    if (startWall.hours >= DAY_END_H) break;
-    const slotStart = new Date(cursorMs);
-    const slotEnd = new Date(slotEndMs);
-    const h = startWall.hours;
-    const m = startWall.minutes;
-    const period = h < 12 ? 'AM' : 'PM';
-    const displayH = h % 12 === 0 ? 12 : h % 12;
-    slots.push({
-      label: `${displayH}:${String(m).padStart(2, '0')} ${period}`,
-      iso: slotStart.toISOString(),
-      endIso: slotEnd.toISOString(),
-      available: false
-    });
-    cursorMs += SLOT_STEP_MS;
+  let cursor = new Date(`${date}T00:00:00`);
+  cursor.setHours(9, 0, 0, 0);
+  while (cursor.getHours() < 18) {
+    const slotStart = new Date(cursor.getTime());
+    const slotEnd   = new Date(cursor.getTime() + durMs);
+    if (slotEnd.getHours() > 18 || (slotEnd.getHours() === 18 && slotEnd.getMinutes() > 0)) break;
+    const h = slotStart.getHours(); const m = slotStart.getMinutes();
+    const period = h < 12 ? 'AM' : 'PM'; const displayH = h % 12 === 0 ? 12 : h % 12;
+    slots.push({ label: `${displayH}:${String(m).padStart(2,'0')} ${period}`, iso: slotStart.toISOString(), endIso: slotEnd.toISOString(), available: false });
+    cursor = new Date(cursor.getTime() + SLOT_STEP_MS);
   }
   return slots;
 }
@@ -202,7 +150,6 @@ function buildEmptySlots(date, durMs, tzOffsetMinutes = 0) {
 exports.getAvailableRooms = async (req, res) => {
   try {
     const { capacity, searchQuery, date, startTime, endTime, equipment } = req.body;
-    const tzOffsetMinutes = readTzOffsetMinutes(req.body);
 
     // ── Step 1: Build Room filter ──────────────────────────────────────
     const roomQuery = { isActive: true };
@@ -241,17 +188,16 @@ exports.getAvailableRooms = async (req, res) => {
       const bookedRoomIds = new Set(overlappingBookings.map(b => b.roomId.toString()));
       availableRooms = rooms.filter(r => !bookedRoomIds.has(r._id.toString()));
     } else if (date) {
-      const { y, mo, d } = parseYmd(date);
-      const dayStartUtcMs = localWallClockToUtcMs(y, mo, d, 0, 0, 0, 0, tzOffsetMinutes);
-      const nd = addCalendarDays(y, mo, d, 1);
-      const nextMidnightUtcMs = localWallClockToUtcMs(nd.y, nd.mo, nd.d, 0, 0, 0, 0, tzOffsetMinutes);
-      const startOfDay = new Date(dayStartUtcMs);
-      const endExclusive = new Date(nextMidnightUtcMs);
+      // Return all rooms but indicate which are booked on that date
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
 
       const dayBookings = await Booking.find({
         roomId: { $in: rooms.map(r => r._id) },
         status: 'confirmed',
-        startTime: { $lt: endExclusive },
+        startTime: { $lt: endOfDay },
         endTime: { $gt: startOfDay }
       }).lean();
 

@@ -11,11 +11,6 @@ export class RoomService {
 
   constructor(private http: HttpClient) {}
 
-  /** Matches backend: JS Date#getTimezoneOffset() so slots align with device clock. */
-  private tzBody(): { tzOffsetMinutes: number } {
-    return { tzOffsetMinutes: new Date().getTimezoneOffset() };
-  }
-
   getAllRooms(): Observable<{ rooms: Room[] }> {
     return this.http.get<{ rooms: Room[] }>(this.base);
   }
@@ -41,10 +36,7 @@ export class RoomService {
     searchQuery?: string;
     durationMinutes?: number;
   }): Observable<{ rooms: Room[]; count: number }> {
-    return this.http.post<{ rooms: Room[]; count: number }>(`${this.base}/available`, {
-      ...body,
-      ...this.tzBody(),
-    });
+    return this.http.post<{ rooms: Room[]; count: number }>(`${this.base}/available`, body);
   }
 
   /**
@@ -57,10 +49,7 @@ export class RoomService {
     capacity?: string;
     query?: string;
   }): Observable<{ slots: TimelineSlot[] }> {
-    return this.http.post<{ slots: TimelineSlot[] }>(`${this.base}/availability-by-timeslots`, {
-      ...body,
-      ...this.tzBody(),
-    });
+    return this.http.post<{ slots: TimelineSlot[] }>(`${this.base}/availability-by-timeslots`, body);
   }
 
   createRoom(room: Partial<Room>): Observable<{ room: Room }> {
