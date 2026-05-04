@@ -405,3 +405,55 @@ exports.deleteRoom = async (req, res) => {
     res.status(500).json({ error: 'Failed to delete room' });
   }
 };
+
+/**
+ * GET /api/rooms/:id/kiosk  (no auth required)
+ * Returns a single-request payload for the kiosk tablet:
+ *   { room, status, currentBooking, nextBooking, serverTime }
+ */
+exports.getKioskData = async (req, res) => {
+  try {
+    const room = await Room.findById(req.params.id)
+      .select('name capacity location floor amenities')
+      .lean();
+    if (!room) return res.status(404).json({ error: 'Room not found' });
+
+    const now        = new Date();
+    const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay   = new Date(now); endOfDay.setHours(23, 59, 59, 999);
+
+    // Fetch all confirmed bookings for this room today, sorted by start time
+    const bookings = await Booking.find({
+      roomId: req.params.id,
+      status: 'confirmed',
+      startTime: { $lt: endOfDay },
+      endTime:   { $gt: startOfDay }
+    })
+      .select('title userName startTime endTime')
+      .sort({ startTime: 1 })
+      .lean();
+
+    let status         = 'AVAILABLE';
+    let currentBooking = null;
+    let nextBooking    = null;
+
+    for (const b of bookings) {
+      const start = new Date(b.startTime);
+      const end   = new Date(b.endTime);
+
+      if (start <= now && end > now) {
+        status         = 'ONGOING';
+        currentBooking = b;
+      } else if (start > now && !nextBooking) {
+        nextBooking = b;
+      }
+    }
+
+    if (status !== 'ONGOING' && nextBooking) status = 'UPCOMING';
+
+    res.json({ room, status, currentBooking, nextBooking, serverTime: now.toISOString() });
+  } catch (error) {
+    console.error('getKioskData error:', error);
+    res.status(500).json({ error: 'Failed to fetch kiosk data' });
+  }
+};

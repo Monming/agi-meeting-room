@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#080810" />
+  <title>Room Kiosk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+
+  <!-- ══ SCREEN: ROOM SELECTOR ══════════════════════════════ -->
+  <div id="screen-selector" class="screen hidden">
+    <div class="selector-header">
+      <h1>📍 Select a Room</h1>
+      <p>Tap a room to launch its kiosk display</p>
+    </div>
+    <div id="rooms-grid" class="rooms-grid">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Loading rooms…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: KIOSK DISPLAY ═══════════════════════════════ -->
+  <div id="screen-kiosk" class="screen hidden">
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="room-meta">
+        <h1 id="room-name" class="room-name">—</h1>
+        <span id="room-detail" class="room-detail"></span>
+      </div>
+      <div class="clock-wrap">
+        <div id="clock-time" class="clock-time">00:00</div>
+        <div class="clock-sub">
+          <span id="clock-ampm" class="clock-ampm">AM</span>
+          <span id="clock-date" class="clock-date">—</span>
+        </div>
+      </div>
+      <button class="back-btn" onclick="goToSelector()" title="All Rooms">⟵ Rooms</button>
+    </div>
+
+    <!-- Status Badge -->
+    <div class="status-wrap">
+      <div id="status-badge" class="status-badge">—</div>
+    </div>
+
+    <!-- Main Content Card -->
+    <div class="main-card-wrap">
+      <!-- ONGOING -->
+      <div id="card-ongoing" class="main-card hidden">
+        <h2 id="ongoing-title" class="meeting-title">—</h2>
+        <p id="ongoing-user" class="meeting-user">—</p>
+        <div class="meeting-time-row">
+          <span class="icon">🕐</span>
+          <span id="ongoing-time" class="meeting-time-text">—</span>
+        </div>
+        <div class="countdown-wrap">
+          <span class="icon">⏱</span>
+          <span id="countdown-text" class="countdown-text">—</span>
+        </div>
+      </div>
+
+      <!-- AVAILABLE -->
+      <div id="card-available" class="main-card hidden">
+        <h2 class="available-title">Room is Ready</h2>
+        <p class="available-sub">Walk-ins welcome. No meeting in progress.</p>
+      </div>
+
+      <!-- UPCOMING (no current) -->
+      <div id="card-upcoming" class="main-card hidden">
+        <p class="upcoming-soon-label">Reserved soon</p>
+        <h2 id="upcoming-title" class="meeting-title">—</h2>
+        <p id="upcoming-user" class="meeting-user">—</p>
+        <div class="meeting-time-row">
+          <span class="icon">🕐</span>
+          <span id="upcoming-time" class="meeting-time-text">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Meeting Bar -->
+    <div id="next-bar" class="next-bar hidden">
+      <span class="next-label">NEXT</span>
+      <span id="next-time" class="next-time">—</span>
+      <span id="next-title-text" class="next-title-text">—</span>
+      <span id="next-user" class="next-user">—</span>
+    </div>
+
+    <!-- Error banner -->
+    <div id="error-banner" class="error-banner hidden">⚠ Unable to reach server — retrying…</div>
+  </div>
+
+  <!-- ══ LOADING ═══════════════════════════════════════════ -->
+  <div id="screen-loading" class="screen">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Connecting…</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

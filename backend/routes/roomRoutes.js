@@ -6,6 +6,7 @@ router.get('/', ctrl.getAllRooms);
 router.get('/search', ctrl.searchRooms);
 router.get('/density', ctrl.getDensity);
 router.get('/status', ctrl.getRoomStatus);
+router.get('/:id/kiosk', ctrl.getKioskData);
 router.post('/available', ctrl.getAvailableRooms);
 router.post('/availability-by-timeslots', ctrl.getAvailabilityByTimeslots);
 router.post('/', ctrl.createRoom);
