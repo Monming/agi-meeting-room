@@ -242,6 +242,7 @@ export class LoginPage implements OnInit {
           console.error('[ERROR] Login failed:', err);
           const message =
             err?.error?.message ||
+            err?.error?.error ||
             (typeof err?.error === 'string' ? err.error : null) ||
             'Server unreachable or timed out';
           const toast = await this.toastCtrl.create({

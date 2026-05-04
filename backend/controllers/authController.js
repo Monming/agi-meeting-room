@@ -2,10 +2,17 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+/** Match how Mongoose stores emails (schema: lowercase + trim). */
+function normalizeEmail(email) {
+  if (typeof email !== 'string') return '';
+  return email.trim().toLowerCase();
+}
+
 exports.register = async (req, res) => {
   console.log('[DEBUG] Register body:', req.body);
   try {
-    const { name, email, password, role } = req.body;
+    const { name, password, role } = req.body;
+    const email = normalizeEmail(req.body?.email);
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -21,7 +28,7 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = new User({
-      name,
+      name: typeof name === 'string' ? name.trim() : name,
       email,
       password: hashedPassword,
       role: role || 'employee'
@@ -39,7 +46,12 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = normalizeEmail(req.body?.email);
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
