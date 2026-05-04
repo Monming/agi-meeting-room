@@ -44,8 +44,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/bookings', bookingRoutes);
 
-// Health check
-app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
+// Health checks (root for ops probes; /api/health so mobile app can ping same origin as apiUrl)
+const healthHandler = (req, res) => res.json({ status: 'ok', time: new Date().toISOString() });
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // Socket.io events
 io.on('connection', (socket) => {

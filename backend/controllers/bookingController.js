@@ -83,16 +83,18 @@ exports.getDaySchedule = async (req, res) => {
    ───────────────────────────────────────────────────────────── */
 exports.getTodayBookings = async (req, res) => {
   try {
-    const { userId } = req.query;
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
 
+    if (!req.user?.id || !mongoose.Types.ObjectId.isValid(req.user.id)) {
+      return res.status(401).json({ error: 'Invalid authenticated user' });
+    }
+
     const query = {
       status: 'confirmed',
-      startTime: { $gte: startOfDay, $lte: endOfDay }
+      startTime: { $gte: startOfDay, $lte: endOfDay },
+      userId: new mongoose.Types.ObjectId(req.user.id)
     };
-    // Support both ObjectId userId and legacy string
-    if (userId) query.userIdLegacy = userId;
 
     const bookings = await Booking.find(query)
       .populate('roomId', 'name capacity location floor amenities')
@@ -109,19 +111,25 @@ exports.getTodayBookings = async (req, res) => {
 
 /* ─────────────────────────────────────────────────────────────
    POST /api/bookings
-   Body: { roomId, startTime, endTime, userId, userName, title }
+   Body: { roomId, startTime, endTime, title? }
+   userId / userName from JWT only (never from client body).
    ─────────────────────────────────────────────────────────────
    Uses a MongoDB session/transaction to make the conflict check
    and insert atomic (prevents race conditions).
    ───────────────────────────────────────────────────────────── */
 exports.createBooking = async (req, res) => {
   const { roomId, startTime, endTime, title } = req.body;
-  const userId = req.user.id;
-  const userName = req.user.name || req.body.userName || 'User';
+  const authUserId = req.user.id;
+  const userName = req.user.name || 'User';
 
   if (!roomId || !startTime || !endTime) {
     return res.status(400).json({ error: 'roomId, startTime, endTime are required' });
   }
+
+  if (!mongoose.Types.ObjectId.isValid(authUserId)) {
+    return res.status(401).json({ error: 'Invalid authenticated user' });
+  }
+  const resolvedUserId = new mongoose.Types.ObjectId(authUserId);
 
   const session = await mongoose.startSession();
 
@@ -152,20 +160,11 @@ exports.createBooking = async (req, res) => {
         });
       }
 
-      // 4. Resolve userId — accept ObjectId or legacy string
-      let resolvedUserId = null;
-      let resolvedLegacyId = null;
-      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-        resolvedUserId = userId;
-      } else if (userId) {
-        resolvedLegacyId = userId; // legacy 'user-001' style
-      }
-
-      // 5. Create booking document
+      // 4. Create booking document (owner = authenticated user only)
       [booking] = await Booking.create([{
         roomId,
         userId:      resolvedUserId,
-        userIdLegacy: resolvedLegacyId,
+        userIdLegacy: null,
         userName:    userName,
         title:       title || 'Meeting',
         startTime:   new Date(startTime),
@@ -375,6 +374,10 @@ exports.createRecurringBooking = async (req, res) => {
     const userId = req.user.id;
     const userName = req.user.name || 'User';
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ error: 'Invalid authenticated user' });
+    }
+
     // Validate required fields
     if (!roomId || !recurrenceType || !startTime || !endTime || !startDate || !endDate) {
       return res.status(400).json({ error: 'roomId, recurrenceType, startTime, endTime, startDate, endDate are required' });
@@ -434,8 +437,8 @@ exports.createRecurringBooking = async (req, res) => {
       });
     }
 
-    // Create all non-conflicting bookings
-    const resolvedUserId = userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null;
+    // Create all non-conflicting bookings (owner = JWT user only)
+    const resolvedUserId = new mongoose.Types.ObjectId(userId);
 
     const bookingDocs = toCreate.map(occ => ({
       roomId,

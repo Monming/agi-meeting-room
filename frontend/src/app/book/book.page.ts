@@ -464,7 +464,11 @@ export class BookPage implements OnInit, OnDestroy {
         error: err => {
           this.isBookingLoading = false;
           this.isConfirmOpen = false;
-          const msg = err.error?.error ?? 'Recurring booking failed.';
+          const msg =
+            err.error?.error ||
+            err.error?.message ||
+            (typeof err.error === 'string' ? err.error : null) ||
+            'Server unreachable or timed out';
           this.showToast(msg, 'danger');
         }
       });
@@ -473,7 +477,6 @@ export class BookPage implements OnInit, OnDestroy {
         roomId: this.selectedRoomToBook!._id,
         startTime: this.selectedTimeSlot,
         endTime,
-        userId: '',
         title: 'Meeting'
       }).subscribe({
         next: () => {
@@ -489,7 +492,11 @@ export class BookPage implements OnInit, OnDestroy {
         error: err => {
           this.isBookingLoading = false;
           this.isConfirmOpen = false;
-          const msg = err.error?.error ?? 'Booking failed. Please try again.';
+          const msg =
+            err.error?.error ||
+            err.error?.message ||
+            (typeof err.error === 'string' ? err.error : null) ||
+            'Server unreachable or timed out';
           this.showToast(msg, 'danger');
         }
       });

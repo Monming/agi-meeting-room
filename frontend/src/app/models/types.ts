@@ -11,9 +11,17 @@ export interface Room {
   bufferMinutes: number;
 }
 
+/** POST /api/bookings body — server sets userId / userName from JWT */
+export interface BookingPayload {
+  roomId: string;
+  startTime: string;
+  endTime: string;
+  title?: string;
+}
+
 export interface Booking {
   _id: string;
-  userId: string;
+  userId?: string | { _id: string; name?: string; email?: string };
   userName: string;
   roomId: string | Room;
   startTime: Date | string;

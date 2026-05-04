@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'http://192.168.1.3:3000/api' // Default local for development
+  /** Backend API base (must end with `/api` — same host as `/api/health` wake-up). */
+  apiUrl: 'http://192.168.1.3:3000/api'
 };
 
 /*

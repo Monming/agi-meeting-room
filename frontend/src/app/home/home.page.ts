@@ -100,8 +100,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   loadTodayBookings() {
-    const userId = this.authService.currentUserValue?.id;
-    this.bookingService.getTodayBookings(userId).subscribe({
+    this.bookingService.getTodayBookings().subscribe({
       next: res => { this.todayBookings = res.bookings; this.isLoading = false; },
       error: () => { this.isLoading = false; }
     });

@@ -271,7 +271,10 @@ export class RegisterPage implements OnInit {
         error: async (err: any) => {
           this.isLoading = false;
           console.error('[ERROR] Register failed:', err);
-          const message = err?.error?.message || 'Registration failed. Please try again.';
+          const message =
+            err?.error?.message ||
+            (typeof err?.error === 'string' ? err.error : null) ||
+            'Server unreachable or timed out';
           this.showToast(message, 'danger');
         }
       });

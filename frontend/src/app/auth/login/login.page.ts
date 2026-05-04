@@ -240,7 +240,10 @@ export class LoginPage implements OnInit {
         error: async (err: any) => {
           this.isLoading = false;
           console.error('[ERROR] Login failed:', err);
-          const message = err?.error?.message || 'Login failed. Check your credentials.';
+          const message =
+            err?.error?.message ||
+            (typeof err?.error === 'string' ? err.error : null) ||
+            'Server unreachable or timed out';
           const toast = await this.toastCtrl.create({
             message,
             duration: 3000,

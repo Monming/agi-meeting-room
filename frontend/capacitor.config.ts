@@ -6,6 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'www',
   server: {
     cleartext: true
+  },
+  /** Dev HTTP / mixed content; after `cap add android` also set usesCleartextTraffic on the application tag if needed. */
+  android: {
+    allowMixedContent: true
   }
 };
 

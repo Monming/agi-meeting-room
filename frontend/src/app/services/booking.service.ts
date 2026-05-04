@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Booking, TimeSlot, WeekDay } from '../models/types';
+import { Booking, BookingPayload, TimeSlot, WeekDay } from '../models/types';
 import { environment } from '../../environments/environment';
 
 export interface RecurringPayload {
@@ -33,10 +33,9 @@ export class BookingService {
 
   constructor(private http: HttpClient) {}
 
-  getTodayBookings(userId?: string): Observable<{ bookings: Booking[] }> {
-    let params = new HttpParams();
-    if (userId) params = params.set('userId', userId);
-    return this.http.get<{ bookings: Booking[] }>(`${this.base}/today`, { params });
+  /** Today's bookings for the authenticated user (server uses JWT; no query params). */
+  getTodayBookings(): Observable<{ bookings: Booking[] }> {
+    return this.http.get<{ bookings: Booking[] }>(`${this.base}/today`);
   }
 
   getDaySchedule(date: string, roomId?: string): Observable<{ date: string; slots: TimeSlot[] }> {
@@ -45,14 +44,7 @@ export class BookingService {
     return this.http.get<{ date: string; slots: TimeSlot[] }>(`${this.base}/day`, { params });
   }
 
-  createBooking(payload: {
-    roomId: string;
-    startTime: string;
-    endTime: string;
-    userId: string;
-    userName?: string;
-    title?: string;
-  }): Observable<{ booking: Booking }> {
+  createBooking(payload: BookingPayload): Observable<{ booking: Booking }> {
     return this.http.post<{ booking: Booking }>(this.base, payload);
   }
 

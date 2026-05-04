@@ -9,7 +9,7 @@ import { environment } from '../../environments/environment';
 export class SocketService {
   private socket!: Socket;
   // Compute socket server URL from API URL (strip /api)
-  private readonly serverUrl = environment.apiUrl.replace('/api', '');
+  private readonly serverUrl = environment.apiUrl.replace(/\/api\/?$/, '');
 
   connect(): void {
     if (this.socket?.connected) return;
