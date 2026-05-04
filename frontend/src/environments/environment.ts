@@ -2,10 +2,12 @@
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
 
+const rawApiUrl = 'http://192.168.1.3:3000/api';
+
 export const environment = {
   production: false,
   /** Backend API base (must end with `/api` — same host as `/api/health` wake-up). */
-  apiUrl: 'http://192.168.1.3:3000/api'
+  apiUrl: rawApiUrl.replace(/\/+$/, ''),
 };
 
 /*

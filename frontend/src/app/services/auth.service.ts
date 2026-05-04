@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface User {
@@ -13,6 +13,7 @@ export interface User {
 
 interface JwtPayloadShape {
   id?: string;
+  sub?: string;
   name?: string;
   email?: string;
   role?: string;
@@ -33,9 +34,25 @@ export class AuthService {
     this.hydrateSessionFromToken();
   }
 
-  /** GET /api/health — warms Render free tier before auth requests. */
+  /**
+   * GET /api/health — best-effort wake for Render cold start.
+   * Failures must not block login/register (older servers or flaky networks).
+   */
   pingBackend(): Observable<unknown> {
-    return this.http.get(this.healthUrl);
+    return this.http.get(this.healthUrl).pipe(
+      catchError(() => of(null))
+    );
+  }
+
+  private coerceId(raw: unknown): string | null {
+    if (raw == null) return null;
+    if (typeof raw === 'string' && raw.length > 0) return raw;
+    if (typeof raw === 'object' && raw !== null && '$oid' in (raw as object)) {
+      const oid = (raw as { $oid?: string }).$oid;
+      return typeof oid === 'string' ? oid : null;
+    }
+    const s = String(raw);
+    return s && s !== '[object Object]' ? s : null;
   }
 
   private decodeJwtPayload(token: string): JwtPayloadShape | null {
@@ -65,7 +82,8 @@ export class AuthService {
     const payload = this.decodeJwtPayload(token);
     const nowSec = Date.now() / 1000;
     const expired = payload?.exp != null && nowSec >= payload.exp;
-    const missingClaims = !payload?.id || !payload?.email || !payload?.name;
+    const id = payload ? this.coerceId(payload.id ?? payload.sub) : null;
+    const missingClaims = !payload || !id || !payload.email || !payload.name;
 
     if (!payload || missingClaims || expired) {
       this.clearSession();
@@ -73,7 +91,7 @@ export class AuthService {
     }
 
     const user: User = {
-      id: String(payload.id),
+      id,
       name: String(payload.name),
       email: String(payload.email),
       role: String(payload.role ?? 'employee'),
@@ -93,23 +111,40 @@ export class AuthService {
   }
 
   login(credentials: { email: string; password: string }): Observable<{ token: string; user: User }> {
+    const body = {
+      email: String(credentials.email ?? '').trim(),
+      password: String(credentials.password ?? '').trim(),
+    };
     return this.pingBackend().pipe(
       switchMap(() =>
-        this.http.post<{ token: string; user: User }>(`${this.authBase}/login`, credentials)
+        this.http.post<{ token: string; user: User }>(`${this.authBase}/login`, body)
       ),
       tap((response) => {
-        if (response?.token) {
+        if (response?.token && response.user) {
+          const u = response.user as User & { _id?: string };
+          const user: User = {
+            id: String(u.id ?? u._id ?? ''),
+            name: String(u.name ?? ''),
+            email: String(u.email ?? ''),
+            role: String(u.role ?? 'employee'),
+          };
           localStorage.setItem('token', response.token);
-          localStorage.setItem('currentUser', JSON.stringify(response.user));
-          this.currentUserSubject.next(response.user);
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          this.currentUserSubject.next(user);
         }
       })
     );
   }
 
   register(userData: { name: string; email: string; password: string; role: string }): Observable<{ message: string }> {
+    const body = {
+      ...userData,
+      name: String(userData.name ?? '').trim(),
+      email: String(userData.email ?? '').trim(),
+      password: String(userData.password ?? '').trim(),
+    };
     return this.pingBackend().pipe(
-      switchMap(() => this.http.post<{ message: string }>(`${this.authBase}/register`, userData))
+      switchMap(() => this.http.post<{ message: string }>(`${this.authBase}/register`, body))
     );
   }
 
