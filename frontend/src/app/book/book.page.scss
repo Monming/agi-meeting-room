@@ -601,3 +601,130 @@
   p { margin: 0; }
 }
 
+/* ── Recurring Booking UI ─────────────────────────────────── */
+.recurrence-section {
+  margin-top: 4px;
+  border-top: 1px solid rgba(51, 65, 85, 0.5);
+  padding-top: 12px;
+
+  .recurrence-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0 8px;
+
+    .recurrence-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #e5e7eb;
+
+      ion-icon {
+        color: #3b82f6;
+        font-size: 20px;
+      }
+    }
+  }
+}
+
+.recurrence-options {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recurrence-type-row {
+  display: flex;
+  gap: 8px;
+
+  ion-chip {
+    --background: #0f172a;
+    --color: #94a3b8;
+    border: 1px solid #334155;
+    font-size: 12px;
+    font-weight: 600;
+    flex: 1;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &.chip-active {
+      --background: rgba(59, 130, 246, 0.18);
+      --color: #60a5fa;
+      border-color: #3b82f6;
+    }
+  }
+}
+
+.custom-days-row {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+
+  .day-bubble {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    background: #0f172a;
+    border: 1px solid #334155;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+
+    &.day-bubble-active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
+    }
+  }
+}
+
+.recurrence-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  font-style: italic;
+
+  ion-icon {
+    color: #3b82f6;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+}
+
+.recurrence-end-date {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .end-date-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .end-date-input {
+    --background: #0f172a;
+    --color: #e5e7eb;
+    --padding-start: 10px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    font-size: 14px;
+    flex: 1;
+  }
+}

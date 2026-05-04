@@ -3,6 +3,11 @@ const mongoose = require('mongoose');
 /**
  * RecurringBooking Model
  * Defines a recurrence rule; individual Booking documents are generated from this.
+ *
+ * recurrenceType:
+ *   "daily"   → every day between startDate and endDate
+ *   "weekly"  → same weekday every week
+ *   "custom"  → specific days of week (daysOfWeek: [0=Sun,1=Mon,...,6=Sat])
  */
 const recurringBookingSchema = new mongoose.Schema({
   userId: {
@@ -21,10 +26,19 @@ const recurringBookingSchema = new mongoose.Schema({
   },
   recurrenceType: {
     type: String,
-    enum: ['daily', 'weekly', 'monthly'],
+    enum: ['daily', 'weekly', 'custom'],
     required: [true, 'recurrenceType is required']
   },
-  /** Time-of-day start (date portion is ignored; only HH:mm matters) */
+  /**
+   * For "custom" type: array of day-of-week integers.
+   * 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+   * For "weekly": automatically set to [dayOfWeek of startDate]
+   */
+  daysOfWeek: {
+    type: [Number],
+    default: []
+  },
+  /** Time-of-day start (only HH:mm is used; date portion is ignored) */
   startTime: {
     type: Date,
     required: true

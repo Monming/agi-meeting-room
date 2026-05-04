@@ -66,14 +66,24 @@
           <p>No bookings for this day</p>
         </div>
 
-        <div class="week-booking-card" *ngFor="let booking of selectedDayBookings">
+        <div class="week-booking-card" *ngFor="let booking of selectedDayBookings" [class.ongoing-card]="isActive(booking)">
           <div class="wbc-left">
             <span class="wbc-time">{{ formatTime(booking.startTime) }}</span>
             <span class="wbc-time-end">{{ formatTime(booking.endTime) }}</span>
           </div>
           <div class="wbc-divider"></div>
           <div class="wbc-info">
-            <p class="wbc-title">{{ booking.title }}</p>
+            <div class="wbc-header-row">
+              <p class="wbc-title">{{ booking.title }}</p>
+              <div class="wbc-badges">
+                <span class="live-indicator" *ngIf="isActive(booking)">LIVE</span>
+                <ion-button fill="clear" size="small" class="edit-btn" 
+                            *ngIf="canEdit(booking)" 
+                            (click)="openEditModal(booking)">
+                  <ion-icon name="pencil-outline"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
             <p class="wbc-room">
               <ion-icon name="location-outline"></ion-icon>
               {{ booking.roomName }}
@@ -88,6 +98,7 @@
     </section>
 
     <!-- ── TODAY'S SCHEDULE ────────────────────────── -->
+    <!--
     <section class="section">
       <div class="section-header">
         <h2 class="section-title">Today's Schedule</h2>
@@ -134,6 +145,7 @@
         </div>
       </div>
     </section>
+    -->
 
     <!-- ── AVAILABLE NOW ────────────────────────── -->
     <section class="section">
@@ -177,3 +189,76 @@
   </div>
 
 </ion-content>
+
+<!-- ── EDIT BOOKING MODAL ────────────────────────── -->
+<ion-modal [isOpen]="isEditModalOpen" (didDismiss)="closeEditModal()" #editModal
+           [initialBreakpoint]="1" [breakpoints]="[0, 1]" class="bottom-sheet-modal">
+  <ng-template>
+    <div class="sheet-header">
+      <h3>Edit Booking</h3>
+      <ion-button fill="clear" color="medium" (click)="closeEditModal()">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <div class="sheet-content" *ngIf="editingBooking">
+      
+      <!-- Show warning if recurring -->
+      <div class="recurring-warning" *ngIf="editingBooking.isRecurring">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        <span>This edits this specific occurrence only.</span>
+      </div>
+
+      <div class="form-group">
+        <label>Meeting Title</label>
+        <ion-input type="text" [(ngModel)]="editForm.title" class="custom-input"></ion-input>
+      </div>
+
+      <div class="form-group">
+        <label>Room</label>
+        <ion-select [(ngModel)]="editForm.roomId" class="custom-input" interface="action-sheet">
+          <ion-select-option *ngFor="let room of roomsWithStatus" [value]="room._id">
+            {{ room.name }} (Cap: {{ room.capacity }})
+          </ion-select-option>
+        </ion-select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Date</label>
+          <ion-input type="date" [(ngModel)]="editForm.date" class="custom-input"></ion-input>
+        </div>
+        <div class="form-group half">
+          <label>Start Time</label>
+          <ion-input type="time" [(ngModel)]="editForm.startTime" class="custom-input"></ion-input>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Duration</label>
+        <div class="duration-chips">
+          <div class="d-chip" 
+               *ngFor="let opt of durationOptions" 
+               [class.active]="editForm.duration === opt.value"
+               (click)="editForm.duration = opt.value">
+            {{ opt.label }}
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-summary" *ngIf="hasEditChanges">
+        <p class="summary-label">New Time</p>
+        <p class="summary-value">
+          {{ editForm.startTime }} – {{ newEndTimeLabel }}
+        </p>
+      </div>
+
+      <ion-button expand="block" class="confirm-btn" 
+                  [disabled]="!hasEditChanges || isSavingEdit"
+                  (click)="saveEdit()">
+        <ion-spinner *ngIf="isSavingEdit" name="crescent"></ion-spinner>
+        <span *ngIf="!isSavingEdit">Save Changes</span>
+      </ion-button>
+    </div>
+  </ng-template>
+</ion-modal>

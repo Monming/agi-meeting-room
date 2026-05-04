@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ToastController, AlertController } from '@ionic/angular';
 import { RoomService } from '../services/room.service';
+import { AuthService } from '../services/auth.service';
 import { Room } from '../models/types';
 
 @Component({
@@ -11,9 +12,9 @@ import { Room } from '../models/types';
 })
 export class SettingsPage implements OnInit {
   // User profile
-  userName = 'Monskie mon';
-  userEmail = 'alice@company.com';
-  userRole = 'User';
+  userName = 'User';
+  userEmail = 'email@example.com';
+  userRole = 'user';
 
   // Notifications
   notifyOnBooking = true;
@@ -40,11 +41,37 @@ export class SettingsPage implements OnInit {
 
   constructor(
     private roomService: RoomService,
+    private authService: AuthService,
     private toast: ToastController,
     private alert: AlertController
   ) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    const user = this.authService.currentUserValue;
+    if (user) {
+      this.userName = user.name || 'User';
+      this.userEmail = user.email || 'email@example.com';
+      this.userRole = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User';
+    }
+  }
+
+  async logout() {
+    const a = await this.alert.create({
+      header: 'Log Out',
+      message: 'Are you sure you want to log out?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Log Out',
+          role: 'destructive',
+          handler: () => {
+            this.authService.logout();
+          }
+        }
+      ]
+    });
+    await a.present();
+  }
 
   toggleAdmin() {
     this.showAdminSection = !this.showAdminSection;

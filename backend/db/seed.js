@@ -16,6 +16,7 @@
 
 require('dotenv').config();
 const mongoose       = require('mongoose');
+const bcrypt         = require('bcryptjs');
 const Equipment      = require('../models/Equipment');
 const User           = require('../models/User');
 const Room           = require('../models/Room');
@@ -41,12 +42,12 @@ const equipmentData = [
   { name: 'Digital Whiteboard',  category: 'AV',           description: 'Interactive touch display board' }
 ];
 
-const userData = [
-  { name: 'Monskie mon',  email: 'alice@company.com',  role: 'admin',  department: 'Engineering' },
-  { name: 'Bob Smith',      email: 'bob@company.com',    role: 'user',   department: 'Design' },
-  { name: 'Carol White',    email: 'carol@company.com',  role: 'user',   department: 'Management' },
-  { name: 'David Lee',      email: 'david@company.com',  role: 'user',   department: 'Sales' },
-  { name: 'Eve Chen',       email: 'eve@company.com',    role: 'user',   department: 'HR' }
+const rawUserData = [
+  { name: 'Monskie mon',  email: 'alice@company.com',  password: 'Admin1234!',  role: 'admin',    department: 'Engineering' },
+  { name: 'Bob Smith',    email: 'bob@company.com',    password: 'Bob1234!',    role: 'employee', department: 'Design' },
+  { name: 'Carol White',  email: 'carol@company.com',  password: 'Carol1234!',  role: 'employee', department: 'Management' },
+  { name: 'David Lee',    email: 'david@company.com',  password: 'David1234!',  role: 'employee', department: 'Sales' },
+  { name: 'Eve Chen',     email: 'eve@company.com',    password: 'Eve1234!',    role: 'guest',    department: 'HR' }
 ];
 
 /* ─────────────────────────────────────────────────────────────
@@ -73,8 +74,14 @@ async function seed() {
   const eq = Object.fromEntries(equipment.map(e => [e.name, e._id]));
   console.log(`📦 Inserted ${equipment.length} equipment items`);
 
-  // ── Users ──────────────────────────────────────────────────
-  const users = await User.insertMany(userData);
+  // ── Users ──────────────────────────────────────────────
+  const hashedUserData = await Promise.all(
+    rawUserData.map(async (u) => ({
+      ...u,
+      password: await bcrypt.hash(u.password, 10)
+    }))
+  );
+  const users = await User.insertMany(hashedUserData);
   const [alice, bob, carol, david, eve] = users;
   console.log(`👤 Inserted ${users.length} users`);
 

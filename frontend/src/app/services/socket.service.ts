@@ -33,4 +33,10 @@ export class SocketService {
       this.socket.on('booking:cancelled', (data: { bookingId: string }) => obs.next(data));
     });
   }
+
+  onBookingUpdated(): Observable<{ booking: Booking }> {
+    return new Observable(obs => {
+      this.socket.on('booking:updated', (data: { booking: Booking }) => obs.next(data));
+    });
+  }
 }

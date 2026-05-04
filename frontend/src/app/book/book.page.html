@@ -267,8 +267,8 @@
   <ion-modal
     [isOpen]="isConfirmOpen"
     (didDismiss)="closeConfirm()"
-    [initialBreakpoint]="0.6"
-    [breakpoints]="[0, 0.6, 0.85]">
+    [initialBreakpoint]="0.85"
+    [breakpoints]="[0, 0.85, 1]">
     <ng-template>
       <ion-content class="confirm-content">
         <div class="drag-pill"></div>
@@ -309,15 +309,83 @@
               <span class="confirm-value">{{ selectedRoomToBook.capacity }} people</span>
             </div>
           </div>
+
+          <!-- ── Repeat Toggle ── -->
+          <div class="recurrence-section">
+            <div class="recurrence-toggle-row">
+              <div class="recurrence-toggle-label">
+                <ion-icon name="repeat-outline"></ion-icon>
+                <span>Repeat this meeting</span>
+              </div>
+              <ion-toggle [(ngModel)]="isRecurring" class="custom-toggle"></ion-toggle>
+            </div>
+
+            <!-- Recurrence options (only when toggled on) -->
+            <div class="recurrence-options" *ngIf="isRecurring">
+
+              <!-- Type selector -->
+              <div class="recurrence-type-row">
+                <ion-chip
+                  [class.chip-active]="recurrenceType === 'daily'"
+                  (click)="recurrenceType = 'daily'">
+                  <ion-icon name="sunny-outline"></ion-icon>
+                  <ion-label>Daily</ion-label>
+                </ion-chip>
+                <ion-chip
+                  [class.chip-active]="recurrenceType === 'weekly'"
+                  (click)="recurrenceType = 'weekly'">
+                  <ion-icon name="calendar-outline"></ion-icon>
+                  <ion-label>Weekly</ion-label>
+                </ion-chip>
+                <ion-chip
+                  [class.chip-active]="recurrenceType === 'custom'"
+                  (click)="recurrenceType = 'custom'">
+                  <ion-icon name="grid-outline"></ion-icon>
+                  <ion-label>Custom</ion-label>
+                </ion-chip>
+              </div>
+
+              <!-- Custom day-of-week picker -->
+              <div class="custom-days-row" *ngIf="recurrenceType === 'custom'">
+                <div
+                  class="day-bubble"
+                  *ngFor="let d of weekDayOptions"
+                  [class.day-bubble-active]="isCustomDaySelected(d.value)"
+                  (click)="toggleCustomDay(d.value)">
+                  {{ d.label }}
+                </div>
+              </div>
+
+              <!-- Recurrence summary -->
+              <p class="recurrence-summary">
+                <ion-icon name="information-circle-outline"></ion-icon>
+                {{ getSelectedDaysLabel() }} until {{ recurringEndDate }}
+              </p>
+
+              <!-- End Date -->
+              <div class="recurrence-end-date">
+                <label class="end-date-label">Repeat until</label>
+                <ion-input
+                  type="date"
+                  [value]="recurringEndDate"
+                  (ionChange)="recurringEndDate = $event.detail.value || recurringEndDate"
+                  class="end-date-input">
+                </ion-input>
+              </div>
+
+            </div>
+          </div>
+
         </div>
         <div class="confirm-actions">
           <ion-button fill="outline" expand="block" (click)="closeConfirm()">Cancel</ion-button>
           <ion-button
             fill="solid"
             expand="block"
-            [disabled]="!canConfirmBooking"
+            [disabled]="!canConfirmBooking || isBookingLoading"
             (click)="confirmBooking()">
-            Confirm Booking
+            <ion-spinner *ngIf="isBookingLoading" name="dots" slot="start"></ion-spinner>
+            {{ isRecurring ? 'Create Recurring' : 'Confirm Booking' }}
           </ion-button>
         </div>
       </ion-content>

@@ -36,11 +36,11 @@ export class BookPage implements OnInit, OnDestroy {
 
   // Duration
   durationOptions: DurationOption[] = [
-    { label: '30 min',  value: 30  },
-    { label: '1 hr',    value: 60  },
-    { label: '1.5 hrs', value: 90  },
-    { label: '2 hrs',   value: 120 },
-    { label: 'Custom',  value: 0   },
+    { label: '30 min', value: 30 },
+    { label: '1 hr', value: 60 },
+    { label: '1.5 hrs', value: 90 },
+    { label: '2 hrs', value: 120 },
+    { label: 'Custom', value: 0 },
   ];
   selectedDuration = 60;       // default 1 hour
   customDurationMinutes: number | null = null;
@@ -78,6 +78,22 @@ export class BookPage implements OnInit, OnDestroy {
   // Confirm Booking
   selectedRoomToBook: Room | null = null;
   isConfirmOpen = false;
+  isBookingLoading = false;
+
+  // Recurring Booking
+  isRecurring = false;
+  recurrenceType: 'daily' | 'weekly' | 'custom' = 'daily';
+  recurringEndDate = '';
+  selectedCustomDays: number[] = [];
+  weekDayOptions = [
+    { label: 'S', value: 0 },
+    { label: 'M', value: 1 },
+    { label: 'T', value: 2 },
+    { label: 'W', value: 3 },
+    { label: 'T', value: 4 },
+    { label: 'F', value: 5 },
+    { label: 'S', value: 6 }
+  ];
 
   // RxJS
   private searchInput$ = new Subject<string>();
@@ -91,7 +107,7 @@ export class BookPage implements OnInit, OnDestroy {
     private roomService: RoomService,
     private socketService: SocketService,
     private toast: ToastController
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.socketService.connect();
@@ -128,9 +144,9 @@ export class BookPage implements OnInit, OnDestroy {
   // State subscription
   // ────────────────────────────────────────────────────────────────────
   subscribeToState() {
-    const roomSub  = this.state.availableRooms$.subscribe(rooms => { this.availableRooms = rooms; });
+    const roomSub = this.state.availableRooms$.subscribe(rooms => { this.availableRooms = rooms; });
     const countSub = this.state.count$.subscribe(c => this.availableCount = c);
-    const loadSub  = this.state.loading$.subscribe(l => this.isFilterLoading = l);
+    const loadSub = this.state.loading$.subscribe(l => this.isFilterLoading = l);
     this.subs.push(roomSub, countSub, loadSub);
   }
 
@@ -244,7 +260,7 @@ export class BookPage implements OnInit, OnDestroy {
       // Deselect
       this.clearTimeSlot();
     } else {
-      this.selectedTimeSlot    = slot.iso;
+      this.selectedTimeSlot = slot.iso;
       this.selectedTimeSlotEnd = slot.endIso;
       this.state.patchFilter({
         startTime: slot.iso,
@@ -255,7 +271,7 @@ export class BookPage implements OnInit, OnDestroy {
   }
 
   clearTimeSlot() {
-    this.selectedTimeSlot    = '';
+    this.selectedTimeSlot = '';
     this.selectedTimeSlotEnd = '';
     this.state.patchFilter({ startTime: null, endTime: null });
   }
@@ -293,32 +309,32 @@ export class BookPage implements OnInit, OnDestroy {
   applyFilters() {
     const dur = this.effectiveDuration;
     const patch: Partial<FilterState> = {
-      date:            this.selectedDate,
-      capacity:        this.selectedCapacity || null,
-      query:           this.searchQuery,
+      date: this.selectedDate,
+      capacity: this.selectedCapacity || null,
+      query: this.searchQuery,
       durationMinutes: dur,
     };
 
     if (this.selectedTimeSlot && this.selectedTimeSlotEnd) {
       patch.startTime = this.selectedTimeSlot;
-      patch.endTime   = this.selectedTimeSlotEnd;
+      patch.endTime = this.selectedTimeSlotEnd;
     } else if (this.selectedTimeSlot) {
       // Fallback: compute endTime from duration
       const end = new Date(new Date(this.selectedTimeSlot).getTime() + dur * 60000);
       patch.startTime = this.selectedTimeSlot;
-      patch.endTime   = end.toISOString();
+      patch.endTime = end.toISOString();
     }
 
     this.state.patchFilter(patch);
   }
 
   clearFilters() {
-    this.selectedCapacity         = '';
-    this.selectedDuration         = 60;
-    this.customDurationMinutes    = null;
-    this.showCustomDurationInput  = false;
-    this.searchQuery              = '';
-    this.showSuggestions          = false;
+    this.selectedCapacity = '';
+    this.selectedDuration = 60;
+    this.customDurationMinutes = null;
+    this.showCustomDurationInput = false;
+    this.searchQuery = '';
+    this.showSuggestions = false;
     this.clearTimeSlot();
     this.state.resetFilters();
     this.state.patchFilter({ date: this.selectedDate, durationMinutes: 60 });
@@ -350,9 +366,9 @@ export class BookPage implements OnInit, OnDestroy {
 
   buildHighlights() {
     const colorMap: Record<string, string> = {
-      green:  '#22c55e',
+      green: '#22c55e',
       yellow: '#eab308',
-      red:    '#ef4444'
+      red: '#ef4444'
     };
     this.highlightedDates = Object.entries(this.densityMap).map(([date, info]) => ({
       date,
@@ -373,18 +389,18 @@ export class BookPage implements OnInit, OnDestroy {
   }
 
   openDaySheet(date: string) {
-    this.daySheetDate    = date;
-    this.daySheetSlots   = [];
+    this.daySheetDate = date;
+    this.daySheetSlots = [];
     this.isDaySheetLoading = true;
-    this.isDaySheetOpen  = true;
+    this.isDaySheetOpen = true;
 
     const roomId = this.selectedRoomFilter !== 'all'
       ? this.allRooms.find(r => r.name === this.selectedRoomFilter)?._id
       : undefined;
 
     this.bookingService.getDaySchedule(date, roomId).subscribe({
-      next:  res  => { this.daySheetSlots = res.slots; this.isDaySheetLoading = false; },
-      error: ()   => { this.isDaySheetLoading = false; }
+      next: res => { this.daySheetSlots = res.slots; this.isDaySheetLoading = false; },
+      error: () => { this.isDaySheetLoading = false; }
     });
   }
 
@@ -421,29 +437,86 @@ export class BookPage implements OnInit, OnDestroy {
       ? this.selectedTimeSlotEnd
       : new Date(new Date(this.selectedTimeSlot).getTime() + this.effectiveDuration * 60000).toISOString();
 
-    this.bookingService.createBooking({
-      roomId:    this.selectedRoomToBook!._id,
-      startTime: this.selectedTimeSlot,
-      endTime,
-      userId:    'user-001',
-      userName:  'Monskie mon',
-      title:     'Meeting'
-    }).subscribe({
-      next: () => {
-        this.isConfirmOpen = false;
-        this.showToast('Room booked successfully! 🎉', 'success');
+    this.isBookingLoading = true;
 
-        // Re-fetch everything: timeslots + rooms + calendar density
-        this.triggerTimeslotRefresh();
-        this.applyFilters();
-        this.loadDensity(this.currentCalendarMonth);
-      },
-      error: err => {
-        this.isConfirmOpen = false;
-        const msg = err.error?.error ?? 'Booking failed. Please try again.';
-        this.showToast(msg, 'danger');
-      }
-    });
+    if (this.isRecurring) {
+      const payload: any = {
+        roomId: this.selectedRoomToBook!._id,
+        startTime: this.selectedTimeSlot,
+        endTime,
+        startDate: this.selectedDate,
+        endDate: this.recurringEndDate || this.selectedDate,
+        recurrenceType: this.recurrenceType,
+        daysOfWeek: this.recurrenceType === 'custom' ? this.selectedCustomDays : [],
+        title: 'Meeting'
+      };
+
+      this.bookingService.createRecurringBooking(payload).subscribe({
+        next: (res) => {
+          this.isBookingLoading = false;
+          this.isConfirmOpen = false;
+          const msg = `Created ${res.bookingsCreated} bookings. ` + (res.skippedConflicts > 0 ? `${res.skippedConflicts} skipped.` : '');
+          this.showToast(msg, 'success');
+          this.triggerTimeslotRefresh();
+          this.applyFilters();
+          this.loadDensity(this.currentCalendarMonth);
+        },
+        error: err => {
+          this.isBookingLoading = false;
+          this.isConfirmOpen = false;
+          const msg = err.error?.error ?? 'Recurring booking failed.';
+          this.showToast(msg, 'danger');
+        }
+      });
+    } else {
+      this.bookingService.createBooking({
+        roomId: this.selectedRoomToBook!._id,
+        startTime: this.selectedTimeSlot,
+        endTime,
+        userId: '',
+        title: 'Meeting'
+      }).subscribe({
+        next: () => {
+          this.isBookingLoading = false;
+          this.isConfirmOpen = false;
+          this.showToast('Room booked successfully! 🎉', 'success');
+
+          // Re-fetch everything: timeslots + rooms + calendar density
+          this.triggerTimeslotRefresh();
+          this.applyFilters();
+          this.loadDensity(this.currentCalendarMonth);
+        },
+        error: err => {
+          this.isBookingLoading = false;
+          this.isConfirmOpen = false;
+          const msg = err.error?.error ?? 'Booking failed. Please try again.';
+          this.showToast(msg, 'danger');
+        }
+      });
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // Recurring Helpers
+  // ────────────────────────────────────────────────────────────────────
+  isCustomDaySelected(day: number): boolean {
+    return this.selectedCustomDays.includes(day);
+  }
+
+  toggleCustomDay(day: number) {
+    const idx = this.selectedCustomDays.indexOf(day);
+    if (idx >= 0) {
+      this.selectedCustomDays.splice(idx, 1);
+    } else {
+      this.selectedCustomDays.push(day);
+    }
+  }
+
+  getSelectedDaysLabel(): string {
+    if (this.selectedCustomDays.length === 0) return 'No days selected';
+    const map = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const sorted = [...this.selectedCustomDays].sort();
+    return sorted.map(d => map[d]).join(', ');
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -452,7 +525,7 @@ export class BookPage implements OnInit, OnDestroy {
   getDotColor(date: string): string {
     const d = this.densityMap[date];
     if (!d) return '';
-    if (d.dot === 'red')    return '#ef4444';
+    if (d.dot === 'red') return '#ef4444';
     if (d.dot === 'yellow') return '#eab308';
     return '#22c55e';
   }
@@ -466,11 +539,11 @@ export class BookPage implements OnInit, OnDestroy {
 
   getAmenityIcon(a: string): string {
     const map: Record<string, string> = {
-      'TV':                 'tv-outline',
-      'Projector':          'film-outline',
-      'Whiteboard':         'easel-outline',
+      'TV': 'tv-outline',
+      'Projector': 'film-outline',
+      'Whiteboard': 'easel-outline',
       'Video Conferencing': 'videocam-outline',
-      'Microphone':         'mic-outline'
+      'Microphone': 'mic-outline'
     };
     return map[a] ?? 'checkmark-circle-outline';
   }
@@ -491,14 +564,14 @@ export class BookPage implements OnInit, OnDestroy {
       let h = parseInt(match[1], 10);
       const m = parseInt(match[2], 10);
       const isPM = match[3].toUpperCase() === 'PM';
-      
+
       if (isPM && h !== 12) h += 12;
       if (!isPM && h === 12) h = 0;
 
       const totalMins = h * 60 + m + this.effectiveDuration;
       const endH = Math.floor(totalMins / 60) % 24;
       const endM = totalMins % 60;
-      
+
       const endPeriod = endH >= 12 ? 'PM' : 'AM';
       const displayEndH = endH % 12 === 0 ? 12 : endH % 12;
       const endLabel = `${displayEndH}:${String(endM).padStart(2, '0')} ${endPeriod}`;
@@ -513,7 +586,7 @@ export class BookPage implements OnInit, OnDestroy {
   getDurationLabel(): string {
     const dur = this.effectiveDuration;
     if (!dur) return '–';
-    if (dur < 60)  return `${dur} min`;
+    if (dur < 60) return `${dur} min`;
     if (dur === 60) return '1 hour';
     if (dur % 60 === 0) return `${dur / 60} hours`;
     return `${Math.floor(dur / 60)}h ${dur % 60}m`;

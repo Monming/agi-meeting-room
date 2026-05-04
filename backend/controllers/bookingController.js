@@ -115,7 +115,9 @@ exports.getTodayBookings = async (req, res) => {
    and insert atomic (prevents race conditions).
    ───────────────────────────────────────────────────────────── */
 exports.createBooking = async (req, res) => {
-  const { roomId, startTime, endTime, userId, userName, title } = req.body;
+  const { roomId, startTime, endTime, title } = req.body;
+  const userId = req.user.id;
+  const userName = req.user.name || req.body.userName || 'User';
 
   if (!roomId || !startTime || !endTime) {
     return res.status(400).json({ error: 'roomId, startTime, endTime are required' });
@@ -164,7 +166,7 @@ exports.createBooking = async (req, res) => {
         roomId,
         userId:      resolvedUserId,
         userIdLegacy: resolvedLegacyId,
-        userName:    userName || 'User',
+        userName:    userName,
         title:       title || 'Meeting',
         startTime:   new Date(startTime),
         endTime:     new Date(endTime),
@@ -176,7 +178,10 @@ exports.createBooking = async (req, res) => {
     });
 
     // 7. Populate for response (outside transaction — read-only)
-    await booking.populate('roomId', 'name capacity location');
+    await booking.populate([
+      { path: 'roomId', select: 'name capacity location floor amenities' },
+      { path: 'userId', select: 'name email' }
+    ]);
 
     // 8. Real-time notification
     if (req.io) req.io.emit('booking:created', { booking });
@@ -195,10 +200,120 @@ exports.createBooking = async (req, res) => {
 };
 
 /* ─────────────────────────────────────────────────────────────
+   PUT /api/bookings/:id
+   Body: { startTime, endTime, roomId?, title? }
+   ───────────────────────────────────────────────────────────── */
+exports.updateBooking = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    const { id } = req.params;
+    const { startTime, endTime, roomId: newRoomId, title } = req.body;
+
+    if (!startTime || !endTime) {
+      return res.status(400).json({ error: 'startTime and endTime are required' });
+    }
+
+    const newStart = new Date(startTime);
+    const newEnd   = new Date(endTime);
+    const now      = new Date();
+
+    if (newEnd <= newStart) {
+      return res.status(400).json({ error: 'endTime must be after startTime' });
+    }
+
+    let updatedBooking;
+
+    await session.withTransaction(async () => {
+      // 1. Load booking
+      const booking = await Booking.findById(id).session(session);
+      if (!booking) throw Object.assign(new Error('Booking not found'), { status: 404 });
+
+      // 2. RBAC — owner or admin only
+      const isOwner = booking.userId && booking.userId.toString() === req.user.id;
+      const isAdmin = req.user.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        throw Object.assign(new Error('Access denied. You do not own this booking.'), { status: 403 });
+      }
+
+      // 3. Guard: cannot edit a booking that has already ended
+      if (new Date(booking.endTime) < now) {
+        throw Object.assign(new Error('Cannot edit a booking that has already ended.'), { status: 400 });
+      }
+
+      // 4. Guard: cannot edit within 5 minutes of start
+      const minsUntilStart = (new Date(booking.startTime) - now) / 60000;
+      if (minsUntilStart < 5 && minsUntilStart > 0) {
+        throw Object.assign(new Error('Cannot edit a booking within 5 minutes of its start time.'), { status: 400 });
+      }
+
+      // 5. Resolve target roomId
+      const targetRoomId = newRoomId || booking.roomId;
+
+      // 6. Verify room exists
+      const room = await Room.findById(targetRoomId).lean().session(session);
+      if (!room) throw Object.assign(new Error('Room not found'), { status: 404 });
+
+      // 7. Conflict detection — exclude this booking itself
+      const bufferMins = room.bufferMinutes || 0;
+      const conflict = await detectConflict(targetRoomId, newStart, newEnd, bufferMins, id, session);
+      if (conflict) {
+        const fmt = d => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        throw Object.assign(
+          new Error(`Time slot conflict with an existing booking (${fmt(conflict.startTime)} – ${fmt(conflict.endTime)})`),
+          { status: 409, conflictDetails: { existingStart: conflict.startTime, existingEnd: conflict.endTime } }
+        );
+      }
+
+      // 8. Apply changes
+      booking.startTime = newStart;
+      booking.endTime   = newEnd;
+      booking.roomId    = targetRoomId;
+      if (title !== undefined) booking.title = title;
+
+      await booking.save({ session });
+
+      // 9. Audit log
+      await writeLog(booking._id, 'updated', req.user.id, {
+        startTime: newStart, endTime: newEnd, roomId: targetRoomId, title
+      }, session);
+
+      updatedBooking = booking;
+    });
+
+    // 10. Populate for response
+    await updatedBooking.populate([
+      { path: 'roomId', select: 'name capacity location floor' },
+      { path: 'userId', select: 'name email' }
+    ]);
+
+    // 11. Real-time broadcast
+    if (req.io) req.io.emit('booking:updated', { booking: updatedBooking });
+
+    res.json({ booking: updatedBooking });
+
+  } catch (err) {
+    console.error('updateBooking error:', err);
+    const status = err.status || 500;
+    const payload = { error: err.message };
+    if (err.conflictDetails) payload.conflictDetails = err.conflictDetails;
+    res.status(status).json(payload);
+  } finally {
+    session.endSession();
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────
    DELETE /api/bookings/:id
    ───────────────────────────────────────────────────────────── */
 exports.cancelBooking = async (req, res) => {
   try {
+    const bookingToCancel = await Booking.findById(req.params.id);
+    if (!bookingToCancel) return res.status(404).json({ error: 'Booking not found' });
+    
+    if (bookingToCancel.userId && bookingToCancel.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied. You do not own this booking.' });
+    }
+
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
       { status: 'cancelled' },
@@ -240,54 +355,92 @@ exports.checkIn = async (req, res) => {
 
 /* ─────────────────────────────────────────────────────────────
    POST /api/bookings/recurring
-   Body: { roomId, userId, recurrenceType, startTime, endTime,
-           startDate, endDate, title }
-   Generates all individual Booking documents from the rule.
+   Body: {
+     roomId, title,
+     startTime,       ← time-of-day ISO (date portion ignored)
+     endTime,         ← time-of-day ISO
+     startDate,       ← first occurrence date
+     endDate,         ← last occurrence date (inclusive)
+     recurrenceType,  ← "daily" | "weekly" | "custom"
+     daysOfWeek,      ← [0-6] required for "custom", optional for "weekly"
+     skipConflicts    ← if true, skip conflicting dates instead of rejecting
+   }
    ───────────────────────────────────────────────────────────── */
 exports.createRecurringBooking = async (req, res) => {
   try {
-    const { roomId, userId, recurrenceType, startTime, endTime, startDate, endDate, title } = req.body;
+    const {
+      roomId, recurrenceType, startTime, endTime,
+      startDate, endDate, title, daysOfWeek, skipConflicts
+    } = req.body;
+    const userId = req.user.id;
+    const userName = req.user.name || 'User';
 
+    // Validate required fields
     if (!roomId || !recurrenceType || !startTime || !endTime || !startDate || !endDate) {
-      return res.status(400).json({ error: 'roomId, recurrenceType, startTime, endTime, startDate, endDate required' });
+      return res.status(400).json({ error: 'roomId, recurrenceType, startTime, endTime, startDate, endDate are required' });
+    }
+    if (recurrenceType === 'custom' && (!daysOfWeek || daysOfWeek.length === 0)) {
+      return res.status(400).json({ error: 'daysOfWeek is required for custom recurrence type' });
     }
 
     const room = await Room.findById(roomId).lean();
     if (!room) return res.status(404).json({ error: 'Room not found' });
 
-    // Save the RecurringBooking rule first
+    // Save the RecurringBooking rule
     const rule = await RecurringBooking.create({
-      roomId, userId, recurrenceType, startTime, endTime,
-      startDate, endDate, title: title || 'Recurring Meeting',
+      roomId, userId, recurrenceType,
+      daysOfWeek: daysOfWeek || [],
+      startTime, endTime, startDate, endDate,
+      title: title || 'Recurring Meeting',
       isActive: true
     });
 
-    // Preview all conflicts before committing
-    const rules       = await getRulesForRoom(roomId);
-    const bufferMins  = Math.max(room.bufferMinutes || 0, rules.bufferMinutes || 0);
-    const conflicts   = await previewRecurringConflicts(rule, bufferMins);
+    // Calculate buffer time
+    const rules      = await getRulesForRoom(roomId);
+    const bufferMins = Math.max(room.bufferMinutes || 0, rules.bufferMinutes || 0);
 
-    if (conflicts.length > 0) {
-      await RecurringBooking.findByIdAndDelete(rule._id); // rollback rule
+    // Preview conflicts for all occurrences
+    const allOccurrences  = expandRecurringBooking(rule);
+    const skipped         = [];
+    const toCreate        = [];
+
+    for (const occ of allOccurrences) {
+      const conflict = await detectConflict(roomId, occ.startTime, occ.endTime, bufferMins);
+      if (conflict) {
+        skipped.push({
+          date: occ.startTime.toISOString().split('T')[0],
+          conflictWith: { start: conflict.startTime, end: conflict.endTime }
+        });
+      } else {
+        toCreate.push(occ);
+      }
+    }
+
+    // If skipConflicts=false (default), reject if any conflicts exist
+    if (!skipConflicts && skipped.length > 0) {
+      await RecurringBooking.findByIdAndDelete(rule._id);
       return res.status(409).json({
-        error: `${conflicts.length} occurrence(s) have conflicts`,
-        conflicts: conflicts.map(c => ({
-          occurrence: c.occurrence,
-          conflictWith: { start: c.conflict.startTime, end: c.conflict.endTime }
-        }))
+        error: `${skipped.length} occurrence(s) have conflicts. Set skipConflicts=true to skip them automatically.`,
+        skipped
       });
     }
 
-    // Generate all occurrence bookings
-    const occurrences    = expandRecurringBooking(rule);
-    const resolvedUserId = userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null;
-    const legacyId       = !resolvedUserId ? userId : null;
+    // If nothing to create, rollback
+    if (toCreate.length === 0) {
+      await RecurringBooking.findByIdAndDelete(rule._id);
+      return res.status(409).json({
+        error: 'All occurrences have conflicts. No bookings were created.',
+        skipped
+      });
+    }
 
-    const bookingDocs = occurrences.map(occ => ({
+    // Create all non-conflicting bookings
+    const resolvedUserId = userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null;
+
+    const bookingDocs = toCreate.map(occ => ({
       roomId,
       userId:             resolvedUserId,
-      userIdLegacy:       legacyId,
-      userName:           req.body.userName || 'User',
+      userName,
       title:              title || 'Recurring Meeting',
       startTime:          occ.startTime,
       endTime:            occ.endTime,
@@ -298,7 +451,7 @@ exports.createRecurringBooking = async (req, res) => {
 
     const created = await Booking.insertMany(bookingDocs);
 
-    // Log each
+    // Write audit logs
     for (const b of created) {
       await writeLog(b._id, 'recurring_generated', resolvedUserId, { recurringBookingId: rule._id });
     }
@@ -306,10 +459,14 @@ exports.createRecurringBooking = async (req, res) => {
     if (req.io) req.io.emit('booking:recurring_created', { count: created.length, recurringBookingId: rule._id });
 
     res.status(201).json({
-      recurringBooking: rule,
-      bookingsCreated: created.length,
-      firstOccurrence: created[0]?.startTime,
-      lastOccurrence:  created[created.length - 1]?.startTime
+      recurringBookingId:  rule._id,
+      recurrenceType:      rule.recurrenceType,
+      daysOfWeek:          rule.daysOfWeek,
+      bookingsCreated:     created.length,
+      skippedConflicts:    skipped.length,
+      skipped,
+      firstOccurrence:     created[0]?.startTime,
+      lastOccurrence:      created[created.length - 1]?.startTime
     });
   } catch (err) {
     console.error('createRecurringBooking error:', err);
@@ -362,12 +519,14 @@ exports.getWeeklyBookings = async (req, res) => {
         date: dateStr,
         bookings: dayBookings.map(b => ({
           _id: b._id,
+          roomId: b.roomId?._id || b.roomId,
           roomName: b.roomId?.name || 'Unknown Room',
           title: b.title || 'Meeting',
           userName: b.userName || b.userId?.name || 'Unknown',
           startTime: b.startTime,
           endTime: b.endTime,
-          status: b.status
+          status: b.status,
+          isRecurring: b.isRecurring || false
         }))
       });
     }

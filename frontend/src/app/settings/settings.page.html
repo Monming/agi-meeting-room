@@ -26,15 +26,19 @@
         <ion-icon name="person-outline" slot="start" class="item-icon"></ion-icon>
         <ion-label>
           <p class="item-label">Full Name</p>
-          <ion-input [(ngModel)]="userName" class="item-input"></ion-input>
+          <ion-input [value]="userName" readonly="true" class="item-input"></ion-input>
         </ion-label>
       </ion-item>
       <ion-item class="settings-item">
         <ion-icon name="mail-outline" slot="start" class="item-icon"></ion-icon>
         <ion-label>
           <p class="item-label">Email</p>
-          <ion-input [(ngModel)]="userEmail" class="item-input"></ion-input>
+          <ion-input [value]="userEmail" readonly="true" class="item-input"></ion-input>
         </ion-label>
+      </ion-item>
+      <ion-item class="settings-item" button (click)="logout()" detail="false">
+        <ion-icon name="log-out-outline" slot="start" color="danger" class="item-icon"></ion-icon>
+        <ion-label color="danger" class="item-label" style="font-size: 15px; font-weight: 600;">Log Out</ion-label>
       </ion-item>
     </ion-list>
   </div>

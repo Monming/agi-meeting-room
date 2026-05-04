@@ -68,12 +68,14 @@ export interface TimelineSlot {
 /** A booking summary shown in the weekly view */
 export interface WeekBooking {
   _id: string;
+  roomId: string;
   roomName: string;
   title: string;
   userName: string;
   startTime: string;
   endTime: string;
   status: string;
+  isRecurring?: boolean;
 }
 
 /** A single day entry in the weekly bookings response */
