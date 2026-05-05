@@ -199,103 +199,16 @@ async function seed() {
   });
   console.log('⚙️  Inserted Boardroom-specific BookingRules');
 
-  // ── Today's Bookings ───────────────────────────────────────
-  const today = new Date();
-  const d = (h, m = 0) => new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m);
 
-  const bookingData = [
-    {
-      roomId: rooms[0]._id,         // Alpha Room
-      userId: alice._id,
-      userIdLegacy: 'user-001',
-      userName: alice.name,
-      title: 'Sprint Planning',
-      startTime: d(9), endTime: d(10),
-      status: 'confirmed'
-    },
-    {
-      roomId: rooms[1]._id,         // Beta Room
-      userId: bob._id,
-      userIdLegacy: 'user-002',
-      userName: bob.name,
-      title: 'Design Review',
-      startTime: d(11), endTime: d(12),
-      status: 'confirmed'
-    },
-    {
-      roomId: rooms[3]._id,         // Delta Room
-      userId: alice._id,
-      userIdLegacy: 'user-001',
-      userName: alice.name,
-      title: 'Client Presentation',
-      startTime: d(14), endTime: d(15, 30),
-      status: 'confirmed'
-    },
-    {
-      roomId: rooms[6]._id,         // Boardroom
-      userId: carol._id,
-      userIdLegacy: 'user-003',
-      userName: carol.name,
-      title: 'Board Meeting',
-      startTime: d(13), endTime: d(14),
-      status: 'confirmed'
-    },
-    {
-      roomId: rooms[4]._id,         // AV Suite 1
-      userId: bob._id,
-      userIdLegacy: 'user-002',
-      userName: bob.name,
-      title: 'Team Sync',
-      startTime: d(16), endTime: d(17),
-      status: 'confirmed'
-    }
-  ];
-
-  const bookings = await Booking.insertMany(bookingData);
-  console.log(`📅 Inserted ${bookings.length} today's bookings`);
-
-  // ── Write BookingLog entries for seeded bookings ───────────
-  const logEntries = bookings.map(b => ({
-    bookingId: b._id,
-    action:    'created',
-    userId:    b.userId,
-    metadata:  { source: 'seed' }
-  }));
-  await BookingLog.insertMany(logEntries);
-  console.log(`📋 Inserted ${logEntries.length} audit log entries`);
-
-  // ── Weekly Recurring Booking example ──────────────────────
-  const nextMonday = new Date();
-  nextMonday.setDate(nextMonday.getDate() + ((8 - nextMonday.getDay()) % 7 || 7));
-  nextMonday.setHours(10, 0, 0, 0);
-
-  const recurringEndDate = new Date(nextMonday);
-  recurringEndDate.setMonth(recurringEndDate.getMonth() + 2);
-
-  const startTimeRule = new Date(); startTimeRule.setUTCHours(10, 0, 0, 0);
-  const endTimeRule   = new Date(); endTimeRule.setUTCHours(11, 0, 0, 0);
-
-  await RecurringBooking.create({
-    userId:         alice._id,
-    roomId:         rooms[0]._id,  // Alpha Room
-    title:          'Weekly Engineering Standup',
-    recurrenceType: 'weekly',
-    startTime:      startTimeRule,
-    endTime:        endTimeRule,
-    startDate:      nextMonday,
-    endDate:        recurringEndDate,
-    isActive:       true
-  });
-  console.log('🔁 Inserted 1 RecurringBooking rule');
 
   console.log('\n✨ Seed complete! Summary:');
   console.log(`   Equipment:        ${equipment.length}`);
   console.log(`   Users:            ${users.length}`);
   console.log(`   Rooms:            ${rooms.length}`);
-  console.log(`   Bookings:         ${bookings.length}`);
+  console.log(`   Bookings:         0 (Removed)`);
   console.log(`   BookingRules:     2`);
-  console.log(`   RecurringBookings: 1`);
-  console.log(`   BookingLogs:      ${logEntries.length}`);
+  console.log(`   RecurringBookings: 0 (Removed)`);
+  console.log(`   BookingLogs:      0 (Removed)`);
 
   await mongoose.disconnect();
   process.exit(0);
