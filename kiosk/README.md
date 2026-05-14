@@ -1,91 +1,36 @@
-# 📺 Meeting Room Kiosk
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Standalone, lightweight display app for tablets mounted outside meeting rooms.  
-**No framework. No build step. Pure HTML + CSS + JS.**
+## Getting Started
 
----
-
-## 🚀 Quick Start
+First, run the development server:
 
 ```bash
-# From the project root
-cd kiosk
-npm start
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-The kiosk will be available at **http://localhost:4300**
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
----
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## 🔗 URL Routes
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-| URL | Description |
-|-----|-------------|
-| `http://localhost:4300` | Room selector — tap a room to launch |
-| `http://localhost:4300?roomId=<id>` | Direct kiosk display for a room |
+## Learn More
 
-### Get Room IDs
-```bash
-curl http://localhost:3000/api/rooms
-```
+To learn more about Next.js, take a look at the following resources:
 
----
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## ⚙️ Configuration
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-Edit the top of `app.js`:
+## Deploy on Vercel
 
-```js
-const CONFIG = {
-  apiUrl:    'http://localhost:3000/api',  // ← your backend URL
-  socketUrl: 'http://localhost:3000',       // ← your socket server URL
-  refresh:   30_000                         // auto-refresh in ms
-};
-```
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-For production (Render.com):
-```js
-apiUrl:    'https://agi-meeting-room1.onrender.com/api',
-socketUrl: 'https://agi-meeting-room1.onrender.com',
-```
-
----
-
-## 🖥️ Display States
-
-| State | Color | Meaning |
-|-------|-------|---------|
-| **AVAILABLE** | 🟢 Green | No current booking |
-| **ONGOING** | 🔴 Red | Meeting in progress + live countdown |
-| **UPCOMING** | 🟡 Amber | Room is free but next meeting starts soon |
-
----
-
-## 📡 Real-Time Events
-
-Listens to Socket.io events from the backend:
-- `booking:created` → instant refresh
-- `booking:updated` → instant refresh  
-- `booking:cancelled` → instant refresh
-
-Plus polls every 30 seconds as a safety fallback.
-
----
-
-## 🖥️ Tablet Setup (Fullscreen)
-
-1. Open the URL on the tablet browser
-2. Press `F11` (or use browser fullscreen mode)
-3. Use a kiosk browser app (e.g. **Fully Kiosk Browser** on Android) for production
-
-### Serve from Backend (Optional)
-
-You can serve the kiosk from the backend instead of a separate server.
-In `backend/server.js`, add after the existing routes:
-
-```js
-const path = require('path');
-app.use('/kiosk', express.static(path.join(__dirname, '../kiosk')));
-```
-
-Then access at: `http://localhost:3000/kiosk`
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
