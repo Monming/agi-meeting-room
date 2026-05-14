@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#080810" />
+  <meta name="theme-color" content="#020617" />
   <title>Room Kiosk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -14,8 +14,8 @@
   <!-- ══ SCREEN: ROOM SELECTOR ══════════════════════════════ -->
   <div id="screen-selector" class="screen hidden">
     <div class="selector-header">
-      <h1>📍 Select a Room</h1>
-      <p>Tap a room to launch its kiosk display</p>
+      <h1>Select a room</h1>
+      <p>Tap a room to open its kiosk display</p>
     </div>
     <div id="rooms-grid" class="rooms-grid">
       <div class="loading-spinner">
@@ -28,71 +28,105 @@
   <!-- ══ SCREEN: KIOSK DISPLAY ═══════════════════════════════ -->
   <div id="screen-kiosk" class="screen hidden">
 
-    <!-- Top Bar -->
-    <div class="top-bar">
-      <div class="room-meta">
-        <h1 id="room-name" class="room-name">—</h1>
-        <span id="room-detail" class="room-detail"></span>
-      </div>
-      <div class="clock-wrap">
-        <div id="clock-time" class="clock-time">00:00</div>
-        <div class="clock-sub">
-          <span id="clock-ampm" class="clock-ampm">AM</span>
-          <span id="clock-date" class="clock-date">—</span>
+    <div id="error-banner" class="error-banner hidden">Unable to reach server — retrying…</div>
+
+    <div class="kiosk-shell">
+      <header class="kiosk-global-head">
+        <div class="kiosk-global-room">
+          <h1 id="room-name" class="room-name">—</h1>
+          <p id="room-detail" class="room-detail"></p>
+        </div>
+        <div class="kiosk-global-head-right">
+          <div class="clock-wrap">
+            <div id="clock-date" class="clock-date">—</div>
+            <div class="clock-time-row">
+              <span id="clock-time" class="clock-time">00:00</span>
+              <span id="clock-ampm" class="clock-ampm">AM</span>
+            </div>
+          </div>
+          <div class="kiosk-head-actions" role="toolbar" aria-label="View and room">
+            <button type="button" id="btn-live-view" class="kiosk-pill is-active" title="Live status">
+              <span class="kiosk-pill-icon" aria-hidden="true">▦</span> Live view
+            </button>
+            <button type="button" id="btn-weekly-view" class="kiosk-pill" title="Weekly calendar">
+              <span class="kiosk-pill-icon" aria-hidden="true">▤</span> Weekly
+            </button>
+            <button type="button" id="btn-select-room" class="kiosk-pill" title="Choose another room">
+              ← Select room
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div id="panel-live" class="kiosk-panel">
+        <div class="kiosk-root">
+          <section class="kiosk-hero">
+            <div class="kiosk-hero-bg" aria-hidden="true"></div>
+            <div class="kiosk-hero-tint" aria-hidden="true"></div>
+            <div class="kiosk-hero-mesh" aria-hidden="true"></div>
+
+            <div class="kiosk-hero-body kiosk-hero-body--solo">
+              <div class="kiosk-hero-col kiosk-hero-col--main">
+                <p class="kiosk-hero-eyebrow">Status</p>
+                <div id="kiosk-status-label" class="kiosk-status-label">AVAILABLE</div>
+                <p id="countdown-caption" class="countdown-caption">Session ends in</p>
+                <div id="hero-countdown" class="hero-countdown" aria-live="polite">—</div>
+              </div>
+
+              <div class="kiosk-hero-col kiosk-hero-col--side">
+                <div class="ring-wrap" aria-hidden="true">
+                  <svg class="ring-svg" viewBox="0 0 120 120">
+                    <circle class="ring-bg" cx="60" cy="60" r="52" />
+                    <circle id="ring-arc" class="ring-arc" cx="60" cy="60" r="52" />
+                  </svg>
+                </div>
+
+                <div class="hero-meeting-stack">
+                  <div id="block-ongoing" class="hero-block hidden">
+                    <h2 id="ongoing-title" class="meeting-title">—</h2>
+                    <p id="ongoing-user" class="meeting-user">—</p>
+                    <p id="ongoing-time" class="meeting-time-text">—</p>
+                  </div>
+                  <div id="block-upcoming" class="hero-block hidden">
+                    <p class="upcoming-soon-label">Next reservation</p>
+                    <h2 id="upcoming-title" class="meeting-title">—</h2>
+                    <p id="upcoming-user" class="meeting-user">—</p>
+                    <p id="upcoming-time" class="meeting-time-text">—</p>
+                  </div>
+                  <div id="block-available" class="hero-block hidden">
+                    <h2 class="available-title">Available</h2>
+                    <p class="available-sub">No meeting in progress. This room is open.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="kiosk-timeline">
+            <header class="tl-head">
+              <p class="tl-eyebrow">Schedule</p>
+              <h2 class="tl-title">Room timeline</h2>
+              <p class="tl-sub">Today and tomorrow · from your reservations</p>
+            </header>
+            <div id="schedule-scroll" class="schedule-scroll"></div>
+          </aside>
         </div>
       </div>
-      <button class="back-btn" onclick="goToSelector()" title="All Rooms">⟵ Rooms</button>
-    </div>
 
-    <!-- Status Badge -->
-    <div class="status-wrap">
-      <div id="status-badge" class="status-badge">—</div>
-    </div>
-
-    <!-- Main Content Card -->
-    <div class="main-card-wrap">
-      <!-- ONGOING -->
-      <div id="card-ongoing" class="main-card hidden">
-        <h2 id="ongoing-title" class="meeting-title">—</h2>
-        <p id="ongoing-user" class="meeting-user">—</p>
-        <div class="meeting-time-row">
-          <span class="icon">🕐</span>
-          <span id="ongoing-time" class="meeting-time-text">—</span>
+      <div id="panel-weekly" class="kiosk-panel hidden">
+        <div class="weekly-toolbar">
+          <button type="button" id="week-prev" class="week-nav-btn" aria-label="Previous week">‹</button>
+          <div class="weekly-toolbar-center">
+            <span id="week-range-label" class="week-range-label">—</span>
+            <button type="button" id="week-today" class="week-today-badge">Today</button>
+          </div>
+          <button type="button" id="week-next" class="week-nav-btn" aria-label="Next week">›</button>
         </div>
-        <div class="countdown-wrap">
-          <span class="icon">⏱</span>
-          <span id="countdown-text" class="countdown-text">—</span>
-        </div>
-      </div>
-
-      <!-- AVAILABLE -->
-      <div id="card-available" class="main-card hidden">
-        <h2 class="available-title">Room is Ready</h2>
-        <p class="available-sub">Walk-ins welcome. No meeting in progress.</p>
-      </div>
-
-      <!-- UPCOMING (no current) -->
-      <div id="card-upcoming" class="main-card hidden">
-        <p class="upcoming-soon-label">Reserved soon</p>
-        <h2 id="upcoming-title" class="meeting-title">—</h2>
-        <p id="upcoming-user" class="meeting-user">—</p>
-        <div class="meeting-time-row">
-          <span class="icon">🕐</span>
-          <span id="upcoming-time" class="meeting-time-text">—</span>
+        <div class="weekly-grid-scroll">
+          <div id="weekly-grid" class="weekly-grid"></div>
         </div>
       </div>
     </div>
-
-    <!-- Next Meeting Bar -->
-    <div id="next-bar" class="next-bar hidden">
-      <span class="next-label">NEXT</span>
-      <span id="next-time" class="next-time">—</span>
-      <span id="next-title-text" class="next-title-text">—</span>
-      <span id="next-user" class="next-user">—</span>
-    </div>
-
-    <!-- Error banner -->
-    <div id="error-banner" class="error-banner hidden">⚠ Unable to reach server — retrying…</div>
   </div>
 
   <!-- ══ LOADING ═══════════════════════════════════════════ -->

@@ -1,7 +1,7 @@
 {
   "name": "meeting-room-kiosk",
   "version": "1.0.0",
-  "description": "Standalone kiosk display for meeting room system. No framework, no build step.",
+  "description": "Standalone kiosk display for meeting room system (vanilla JS, no build step).",
   "scripts": {
     "start": "npx serve@14 . --listen 4300 --no-clipboard",
     "dev": "npx serve@14 . --listen 4300 --no-clipboard"

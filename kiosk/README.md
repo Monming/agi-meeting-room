@@ -1,91 +1,18 @@
-# 📺 Meeting Room Kiosk
+# Meeting room kiosk (vanilla)
 
-Standalone, lightweight display app for tablets mounted outside meeting rooms.  
-**No framework. No build step. Pure HTML + CSS + JS.**
+Served static files: open `index.html` or `index.html?roomId=<your MongoDB room id>`.
 
----
+- **Rooms list:** `GET /api/rooms` (same as before)
+- **Kiosk payload:** `GET /api/rooms/:id/kiosk` — returns `room`, `status`, `currentBooking`, `nextBooking`, `serverTime`, and **`schedule`** (confirmed bookings in a **~8 week window** around today for the weekly grid and timeline, sorted)
 
-## 🚀 Quick Start
+**UI:** **Live view** shows the status hero and today/tomorrow list. **Weekly** shows a Sun–Sat calendar (8am–6pm) with week navigation and a live “now” line when the visible week includes today. **Select room** returns to the room list.
+
+Configure API base in `app.js` (`CONFIG.apiUrl` / `CONFIG.socketUrl`). Default assumes backend at `http://localhost:3000`.
 
 ```bash
-# From the project root
-cd kiosk
-npm start
+npm run dev
 ```
 
-The kiosk will be available at **http://localhost:4300**
+Then open `http://localhost:4300` and pick a room, or pass `?roomId=...` directly.
 
----
-
-## 🔗 URL Routes
-
-| URL | Description |
-|-----|-------------|
-| `http://localhost:4300` | Room selector — tap a room to launch |
-| `http://localhost:4300?roomId=<id>` | Direct kiosk display for a room |
-
-### Get Room IDs
-```bash
-curl http://localhost:3000/api/rooms
-```
-
----
-
-## ⚙️ Configuration
-
-Edit the top of `app.js`:
-
-```js
-const CONFIG = {
-  apiUrl:    'http://localhost:3000/api',  // ← your backend URL
-  socketUrl: 'http://localhost:3000',       // ← your socket server URL
-  refresh:   30_000                         // auto-refresh in ms
-};
-```
-
-For production (Render.com):
-```js
-apiUrl:    'https://agi-meeting-room1.onrender.com/api',
-socketUrl: 'https://agi-meeting-room1.onrender.com',
-```
-
----
-
-## 🖥️ Display States
-
-| State | Color | Meaning |
-|-------|-------|---------|
-| **AVAILABLE** | 🟢 Green | No current booking |
-| **ONGOING** | 🔴 Red | Meeting in progress + live countdown |
-| **UPCOMING** | 🟡 Amber | Room is free but next meeting starts soon |
-
----
-
-## 📡 Real-Time Events
-
-Listens to Socket.io events from the backend:
-- `booking:created` → instant refresh
-- `booking:updated` → instant refresh  
-- `booking:cancelled` → instant refresh
-
-Plus polls every 30 seconds as a safety fallback.
-
----
-
-## 🖥️ Tablet Setup (Fullscreen)
-
-1. Open the URL on the tablet browser
-2. Press `F11` (or use browser fullscreen mode)
-3. Use a kiosk browser app (e.g. **Fully Kiosk Browser** on Android) for production
-
-### Serve from Backend (Optional)
-
-You can serve the kiosk from the backend instead of a separate server.
-In `backend/server.js`, add after the existing routes:
-
-```js
-const path = require('path');
-app.use('/kiosk', express.static(path.join(__dirname, '../kiosk')));
-```
-
-Then access at: `http://localhost:3000/kiosk`
+No build step — UI is `index.html`, `app.css`, and `app.js` only.

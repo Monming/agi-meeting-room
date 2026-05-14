@@ -409,7 +409,9 @@ exports.deleteRoom = async (req, res) => {
 /**
  * GET /api/rooms/:id/kiosk  (no auth required)
  * Returns a single-request payload for the kiosk tablet:
- *   { room, status, currentBooking, nextBooking, serverTime }
+ *   { room, status, currentBooking, nextBooking, serverTime, schedule }
+ * `schedule` is confirmed bookings for this room in a rolling window (sorted):
+ *   local midnight − 14 days through local midnight + 42 days (for weekly calendar navigation).
  */
 exports.getKioskData = async (req, res) => {
   try {
@@ -418,16 +420,20 @@ exports.getKioskData = async (req, res) => {
       .lean();
     if (!room) return res.status(404).json({ error: 'Room not found' });
 
-    const now        = new Date();
-    const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay   = new Date(now); endOfDay.setHours(23, 59, 59, 999);
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const rangeStart = new Date(startOfDay);
+    rangeStart.setDate(rangeStart.getDate() - 14);
+    const rangeEnd = new Date(startOfDay);
+    rangeEnd.setDate(rangeEnd.getDate() + 42);
 
-    // Fetch all confirmed bookings for this room today, sorted by start time
+    // Confirmed bookings overlapping the kiosk range (timeline + weekly navigator)
     const bookings = await Booking.find({
       roomId: req.params.id,
       status: 'confirmed',
-      startTime: { $lt: endOfDay },
-      endTime:   { $gt: startOfDay }
+      startTime: { $lt: rangeEnd },
+      endTime: { $gt: rangeStart },
     })
       .select('title userName startTime endTime')
       .sort({ startTime: 1 })
@@ -451,7 +457,14 @@ exports.getKioskData = async (req, res) => {
 
     if (status !== 'ONGOING' && nextBooking) status = 'UPCOMING';
 
-    res.json({ room, status, currentBooking, nextBooking, serverTime: now.toISOString() });
+    res.json({
+      room,
+      status,
+      currentBooking,
+      nextBooking,
+      serverTime: now.toISOString(),
+      schedule: bookings,
+    });
   } catch (error) {
     console.error('getKioskData error:', error);
     res.status(500).json({ error: 'Failed to fetch kiosk data' });
