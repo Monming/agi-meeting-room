@@ -79,6 +79,7 @@ export class BookPage implements OnInit, OnDestroy {
   selectedRoomToBook: Room | null = null;
   isConfirmOpen = false;
   isBookingLoading = false;
+  meetingTitle = '';
 
   // Recurring Booking
   isRecurring = false;
@@ -419,6 +420,7 @@ export class BookPage implements OnInit, OnDestroy {
       return;
     }
     this.selectedRoomToBook = room;
+    this.meetingTitle = '';
     this.isConfirmOpen = true;
   }
 
@@ -454,7 +456,7 @@ export class BookPage implements OnInit, OnDestroy {
         endDate: this.recurringEndDate || this.selectedDate,
         recurrenceType: this.recurrenceType,
         daysOfWeek: this.recurrenceType === 'custom' ? this.selectedCustomDays : [],
-        title: 'Meeting'
+        title: this.meetingTitle.trim() || 'Meeting'
       };
 
       this.bookingService.createRecurringBooking(payload).subscribe({
@@ -483,7 +485,7 @@ export class BookPage implements OnInit, OnDestroy {
         roomId: this.selectedRoomToBook!._id,
         startTime: this.selectedTimeSlot,
         endTime,
-        title: 'Meeting'
+        title: this.meetingTitle.trim() || 'Meeting'
       }).subscribe({
         next: () => {
           this.isBookingLoading = false;

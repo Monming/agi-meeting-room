@@ -310,6 +310,18 @@
             </div>
           </div>
 
+          <div class="confirm-row">
+            <ion-icon name="text-outline" style="align-self: flex-start; margin-top: 8px;"></ion-icon>
+            <div style="flex: 1;">
+              <span class="confirm-label" style="display: block; margin-bottom: 4px;">Meeting Subject</span>
+              <ion-input
+                placeholder="Enter meeting subject"
+                [(ngModel)]="meetingTitle"
+                style="--background: var(--ion-color-step-100, #f1f5f9); border: 1px solid var(--ion-color-step-200, #e2e8f0); border-radius: 6px; --padding-start: 12px; font-size: 14px; min-height: 40px; width: 100%;">
+              </ion-input>
+            </div>
+          </div>
+
           <!-- ── Repeat Toggle ── -->
           <div class="recurrence-section">
             <div class="recurrence-toggle-row">
