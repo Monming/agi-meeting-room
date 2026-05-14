@@ -182,14 +182,15 @@ async function run() {
   const slotEnd   = new Date(slotStart.getTime() + 60_000 * 60);
   await queryAvailableRooms({ minCapacity: 10, startTime: slotStart, endTime: slotEnd });
 
-  // 2. Conflict check for Alpha Room
-  const firstRoom = await Room.findOne({ name: 'Alpha Room' }).lean();
-  if (firstRoom) {
+  // 2. Conflict check for all rooms
+  const allRooms = await Room.find().lean();
+  console.log(`\n=== Running Conflict Checks for ${allRooms.length} Rooms ===`);
+  for (const room of allRooms) {
     await queryConflictDetection({
-      roomId:        firstRoom._id,
+      roomId:        room._id,
       startTime:     slotStart,
       endTime:       slotEnd,
-      bufferMinutes: 15
+      bufferMinutes: room.bufferMinutes || 0
     });
   }
 

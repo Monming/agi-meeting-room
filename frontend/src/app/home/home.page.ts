@@ -224,6 +224,19 @@ export class HomePage implements OnInit, OnDestroy {
     return true;
   }
 
+  /** YYYY-MM-DD in the user's local calendar (not UTC date). */
+  private localDateInputString(d: Date): string {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  /** Local calendar date + HH:mm → UTC ISO sent to API */
+  private localWallTimeToUtcIso(dateYmd: string, hhmm: string): string {
+    const [y, mo, d] = dateYmd.split('-').map(Number);
+    const [h, m] = hhmm.split(':').map(Number);
+    return new Date(y, mo - 1, d, h, m, 0, 0).toISOString();
+  }
+
   openEditModal(booking: WeekBooking) {
     if (!this.canEdit(booking)) return;
     
@@ -232,13 +245,12 @@ export class HomePage implements OnInit, OnDestroy {
     const end = new Date(booking.endTime);
     const duration = (end.getTime() - start.getTime()) / 60000;
 
-    // Pad time strings for input[type="time"]
     const pad = (n: number) => n.toString().padStart(2, '0');
     
     this.editForm = {
       title: booking.title,
       roomId: booking.roomId,
-      date: start.toISOString().split('T')[0],
+      date: this.localDateInputString(start),
       startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
       duration: duration
     };
@@ -254,8 +266,8 @@ export class HomePage implements OnInit, OnDestroy {
   get newEndTimeLabel(): string {
     if (!this.editForm.date || !this.editForm.startTime || !this.editForm.duration) return '';
     try {
-      const startIso = `${this.editForm.date}T${this.editForm.startTime}:00`;
-      const end = new Date(new Date(startIso).getTime() + this.editForm.duration * 60000);
+      const startUtc = this.localWallTimeToUtcIso(this.editForm.date, this.editForm.startTime);
+      const end = new Date(new Date(startUtc).getTime() + this.editForm.duration * 60000);
       return end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch {
       return '';
@@ -269,7 +281,7 @@ export class HomePage implements OnInit, OnDestroy {
     const origDuration = (origEnd.getTime() - origStart.getTime()) / 60000;
     const pad = (n: number) => n.toString().padStart(2, '0');
     const origTimeStr = `${pad(origStart.getHours())}:${pad(origStart.getMinutes())}`;
-    const origDateStr = origStart.toISOString().split('T')[0];
+    const origDateStr = this.localDateInputString(origStart);
 
     return (
       this.editForm.title !== this.editingBooking.title ||
@@ -283,8 +295,11 @@ export class HomePage implements OnInit, OnDestroy {
   saveEdit() {
     if (!this.editingBooking || !this.hasEditChanges) return;
 
-    const startIso = `${this.editForm.date}T${this.editForm.startTime}:00`;
+    const startIso = this.localWallTimeToUtcIso(this.editForm.date, this.editForm.startTime);
     const endIso = new Date(new Date(startIso).getTime() + this.editForm.duration * 60000).toISOString();
+
+    console.log('[Booking TZ] Edit save — local date/time:', this.editForm.date, this.editForm.startTime);
+    console.log('[Booking TZ] Edit save — UTC sent:', startIso, endIso);
 
     this.isSavingEdit = true;
     this.bookingService.updateBooking(this.editingBooking._id, {

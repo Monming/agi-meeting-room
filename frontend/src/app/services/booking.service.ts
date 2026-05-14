@@ -6,14 +6,15 @@ import { environment } from '../../environments/environment';
 
 export interface RecurringPayload {
   roomId: string;
-  startTime: string;     // time-of-day ISO
-  endTime: string;       // time-of-day ISO
-  startDate: string;     // YYYY-MM-DD first occurrence
-  endDate: string;       // YYYY-MM-DD last occurrence
+  startTime: string;
+  endTime: string;
+  startDate: string;
+  endDate: string;
   recurrenceType: 'daily' | 'weekly' | 'custom';
-  daysOfWeek?: number[]; // [0=Sun ... 6=Sat], required for custom
+  daysOfWeek?: number[];
   title?: string;
   skipConflicts?: boolean;
+  tzOffsetMinutes?: number;
 }
 
 export interface RecurringResult {
@@ -33,33 +34,55 @@ export class BookingService {
 
   constructor(private http: HttpClient) {}
 
-  /** Today's bookings for the authenticated user (server uses JWT; no query params). */
+  tzPayload(): { tzOffsetMinutes: number } {
+    return { tzOffsetMinutes: new Date().getTimezoneOffset() };
+  }
+
   getTodayBookings(): Observable<{ bookings: Booking[] }> {
-    return this.http.get<{ bookings: Booking[] }>(`${this.base}/today`);
+    const params = new HttpParams().set(
+      'tzOffsetMinutes',
+      String(new Date().getTimezoneOffset())
+    );
+    return this.http.get<{ bookings: Booking[] }>(`${this.base}/today`, { params });
   }
 
   getDaySchedule(date: string, roomId?: string): Observable<{ date: string; slots: TimeSlot[] }> {
-    let params = new HttpParams().set('date', date);
+    let params = new HttpParams()
+      .set('date', date)
+      .set('tzOffsetMinutes', String(new Date().getTimezoneOffset()));
     if (roomId) params = params.set('roomId', roomId);
     return this.http.get<{ date: string; slots: TimeSlot[] }>(`${this.base}/day`, { params });
   }
 
   createBooking(payload: BookingPayload): Observable<{ booking: Booking }> {
-    return this.http.post<{ booking: Booking }>(this.base, payload);
+    return this.http.post<{ booking: Booking }>(this.base, {
+      ...payload,
+      ...this.tzPayload(),
+    });
   }
 
   createRecurringBooking(payload: RecurringPayload): Observable<RecurringResult> {
-    return this.http.post<RecurringResult>(`${this.base}/recurring`, payload);
+    return this.http.post<RecurringResult>(`${this.base}/recurring`, {
+      ...payload,
+      ...this.tzPayload(),
+    });
   }
 
-  updateBooking(id: string, payload: {
-    startTime: string;
-    endTime: string;
-    roomId?: string;
-    title?: string;
-  }): Observable<{ booking: any }> {
-    return this.http.put<{ booking: any }>(`${this.base}/${id}`, payload);
+  updateBooking(
+    id: string,
+    payload: {
+      startTime: string;
+      endTime: string;
+      roomId?: string;
+      title?: string;
+    }
+  ): Observable<{ booking: unknown }> {
+    return this.http.put<{ booking: unknown }>(`${this.base}/${id}`, {
+      ...payload,
+      ...this.tzPayload(),
+    });
   }
+
   cancelBooking(id: string): Observable<{ message: string; booking: Booking }> {
     return this.http.delete<{ message: string; booking: Booking }>(`${this.base}/${id}`);
   }

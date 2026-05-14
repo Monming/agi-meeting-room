@@ -3,6 +3,9 @@ const router  = express.Router();
 const ctrl    = require('../controllers/bookingController');
 const { verifyToken } = require('../middleware/auth');
 
+// Public — no auth required (used by kiosk display)
+router.get('/kiosk-week',     ctrl.getKioskWeeklyBookings);
+
 router.get('/today',          verifyToken, ctrl.getTodayBookings);
 router.get('/week',           verifyToken, ctrl.getWeeklyBookings);
 router.get('/day',            verifyToken, ctrl.getDaySchedule);

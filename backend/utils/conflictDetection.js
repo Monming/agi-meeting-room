@@ -32,7 +32,8 @@ async function detectConflict(
   excludeId = null,
   session = null
 ) {
-  const bufferMs      = bufferMinutes * 60_000;
+  // Disabled buffer time to allow back-to-back meetings
+  const bufferMs      = 0; // bufferMinutes * 60_000;
   const effectiveStart = new Date(new Date(startTime).getTime() - bufferMs);
   const effectiveEnd   = new Date(new Date(endTime).getTime()   + bufferMs);
 

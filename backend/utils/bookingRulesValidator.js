@@ -1,4 +1,5 @@
 const BookingRules = require('../models/BookingRules');
+const { utcMsToLocalWallClock } = require('./timezone');
 
 /**
  * getRulesForRoom
@@ -38,9 +39,10 @@ async function getRulesForRoom(roomId) {
  * @param {Date}   params.startTime
  * @param {Date}   params.endTime
  * @param {string|ObjectId} params.roomId
+ * @param {number} [params.tzOffsetMinutes] JS getTimezoneOffset from client (default 0 = validate in UTC clock)
  * @returns {Promise<string[]>} validation errors
  */
-async function validateBookingAgainstRules({ startTime, endTime, roomId }) {
+async function validateBookingAgainstRules({ startTime, endTime, roomId, tzOffsetMinutes = 0 }) {
   const rules  = await getRulesForRoom(roomId);
   const errors = [];
   const start  = new Date(startTime);
@@ -63,9 +65,11 @@ async function validateBookingAgainstRules({ startTime, endTime, roomId }) {
     );
   }
 
-  // 3. Allowed hours check
-  const startHour = start.getHours();
-  const endHour   = end.getHours() + (end.getMinutes() > 0 ? 1 : 0);
+  // 3. Allowed hours (opening hours in the user's local zone, not server UTC)
+  const startWall = utcMsToLocalWallClock(start.getTime(), tzOffsetMinutes);
+  const endWall = utcMsToLocalWallClock(end.getTime(), tzOffsetMinutes);
+  const startHour = startWall.hours;
+  const endHour = endWall.hours + (endWall.minutes > 0 ? 1 : 0);
   if (startHour < rules.allowedStartHour) {
     errors.push(`Bookings cannot start before ${rules.allowedStartHour}:00`);
   }

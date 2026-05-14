@@ -437,6 +437,12 @@ export class BookPage implements OnInit, OnDestroy {
       ? this.selectedTimeSlotEnd
       : new Date(new Date(this.selectedTimeSlot).getTime() + this.effectiveDuration * 60000).toISOString();
 
+    const slotLabel = this.timelineSlots.find(s => s.iso === this.selectedTimeSlot)?.label ?? '';
+    console.log('[Booking TZ] Selected local label:', slotLabel);
+    console.log('[Booking TZ] Sent start (UTC ISO):', this.selectedTimeSlot);
+    console.log('[Booking TZ] Sent end (UTC ISO):', endTime);
+    console.log('[Booking TZ] tzOffsetMinutes (getTimezoneOffset):', new Date().getTimezoneOffset());
+
     this.isBookingLoading = true;
 
     if (this.isRecurring) {

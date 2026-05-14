@@ -68,8 +68,8 @@
 
         <div class="week-booking-card" *ngFor="let booking of selectedDayBookings" [class.ongoing-card]="isActive(booking)">
           <div class="wbc-left">
-            <span class="wbc-time">{{ formatTime(booking.startTime) }}</span>
-            <span class="wbc-time-end">{{ formatTime(booking.endTime) }}</span>
+            <span class="wbc-time">{{ booking.startTime | date:'h:mm a' }}</span>
+            <span class="wbc-time-end">{{ booking.endTime | date:'h:mm a' }}</span>
           </div>
           <div class="wbc-divider"></div>
           <div class="wbc-info">

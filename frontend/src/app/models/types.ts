@@ -14,9 +14,12 @@ export interface Room {
 /** POST /api/bookings body — server sets userId / userName from JWT */
 export interface BookingPayload {
   roomId: string;
+  /** ISO-8601 UTC instant from Date#toISOString() */
   startTime: string;
   endTime: string;
   title?: string;
+  /** Same as JS Date#getTimezoneOffset — opening-hour rules align with user's clock */
+  tzOffsetMinutes?: number;
 }
 
 export interface Booking {
